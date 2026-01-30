@@ -15,7 +15,7 @@ export default defineConfig({
   author: {
     name: "bebiks",
     email: "lukasz@caido.io",
-    url: "https://github.com/bebiksior/Caido403Bypasser",
+    url: "https://github.com/caido-community/Caido403Bypasser",
   },
   plugins: [
     {
