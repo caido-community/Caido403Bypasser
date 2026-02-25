@@ -22,12 +22,12 @@ export const updateSettings = async (
   newSettings: Settings,
 ): Promise<Result<Settings>> => {
   const settingsStore = SettingsStore.get();
-  const settings = settingsStore.getSettings();
 
   settingsStore.updateSettings(newSettings);
-  await saveSettingsToFile(sdk, settings);
+  const updatedSettings = settingsStore.getSettings();
+  await saveSettingsToFile(sdk, updatedSettings);
 
-  return { kind: "Success", value: settings };
+  return { kind: "Success", value: updatedSettings };
 };
 
 const saveSettingsToFile = async (sdk: SDK, settings: Settings) => {
