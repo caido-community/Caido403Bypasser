@@ -128,7 +128,7 @@ export const updateScan = (
   return { kind: "Error", error: "Scan not found" };
 };
 
-export const reRunScan = (sdk: SDK, scanID: number): Result<Scan> => {
+export const reRunScan = async (sdk: SDK, scanID: number): Promise<Result<Scan>> => {
   const scanStore = ScanStore.get();
   const scan = scanStore.getScan(scanID);
 
@@ -158,7 +158,7 @@ export const clearScans = (sdk: CaidoBackendSDK): Result<void> => {
   return { kind: "Success", value: undefined };
 };
 
-export const runScan = (sdk: CaidoBackendSDK, scanID: number): Result<Scan> => {
+export const runScan = async (sdk: CaidoBackendSDK, scanID: number): Promise<Result<Scan>> => {
   try {
     const scanStore = ScanStore.get();
     const scan = scanStore.getScan(scanID);
@@ -173,7 +173,7 @@ export const runScan = (sdk: CaidoBackendSDK, scanID: number): Result<Scan> => {
     const updateScanState = (status: ScanStatus) => {
       try {
         scanStore.updateScan(scan.ID, { Status: status });
-        sdk.api.send("scans:updated", scan.ID, { State: status });
+        sdk.api.send("scans:updated", scan.ID, { Status: status });
       } catch (error) {
         throw createScanError(
           sdk,
@@ -202,23 +202,19 @@ export const runScan = (sdk: CaidoBackendSDK, scanID: number): Result<Scan> => {
     });
 
     try {
-      Promise.race([runScanWorker(sdk, scan), timeoutPromise]).catch(
-        (error) => {
-          if (error.code === ScanErrorCode.SCAN_TIMEOUT) {
-            console.error(error);
-            updateScanState("Timed Out");
-          } else {
-            throw error;
-          }
-        }
-      );
+      await Promise.race([runScanWorker(sdk, scan), timeoutPromise]);
     } catch (error) {
-      throw createScanError(
-        sdk,
-        scanID,
-        ScanErrorCode.SCAN_WORKER_ERROR,
-        error
-      );
+      if (error instanceof ScanError && error.code === ScanErrorCode.SCAN_TIMEOUT) {
+        console.error(error);
+        updateScanState("Timed Out");
+      } else {
+        throw createScanError(
+          sdk,
+          scanID,
+          ScanErrorCode.SCAN_WORKER_ERROR,
+          error
+        );
+      }
     } finally {
       const finishedAt = new Date();
       scanStore.updateScan(scan.ID, { finishedAt });
@@ -260,7 +256,7 @@ export const cancelScan = (sdk: CaidoBackendSDK, id: number): Result<Scan> => {
       return { kind: "Error", error: "Scan not found" };
     }
 
-    sdk.api.send("scans:updated", id, { State: "Cancelled" });
+    sdk.api.send("scans:updated", id, { Status: "Cancelled" });
     return { kind: "Success", value: updatedScan };
   }
 
