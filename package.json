@@ -15,7 +15,7 @@
     "@caido-community/dev": "^0.1.6",
     "@caido/eslint-config": "^0.6.0",
     "@caido/plugin-manifest": "0.3.0",
-    "@caido/sdk-backend": "^0.50.2",
+    "@caido/sdk-backend": "0.55.3",
     "@caido/tailwindcss": "0.0.1",
     "@types/node": "^24.1.0",
     "@vitest/ui": "^3.2.4",

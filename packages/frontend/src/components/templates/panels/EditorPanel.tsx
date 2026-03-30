@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchOpenAIStream, handleBackendCall } from "@/utils/utils";
+import { handleBackendCall } from "@/utils/utils";
+import {
+  generateTemplate,
+  getAvailableModelGroups,
+  type Model,
+  type ModelGroup,
+} from "@/utils/ai";
 import { useSDKStore } from "@/stores/sdkStore";
-import { aiSystemPrompt } from "@/constants";
 import { runScript, Template } from "shared";
 import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-javascript";
@@ -9,27 +14,34 @@ import "ace-builds/src-noconflict/theme-chaos";
 import { StyledBox } from "caido-material-ui";
 import {
   Button,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   Input,
+  ListSubheader,
+  MenuItem,
+  Select,
   TextareaAutosize,
 } from "@mui/material";
 import { useTemplates, useTemplatesLocalStore } from "@/stores/templatesStore";
 import useTestStore from "@/stores/testsStore";
-import { useSettings } from "@/stores/settingsStore";
 
 const EditorPanel = () => {
   const sdk = useSDKStore.getState().getSDK();
   const { selectedTemplateID } = useTemplatesLocalStore();
   const { templates } = useTemplates();
-  const { data: settings, isLoading, isError, error } = useSettings();
 
   const testContent = useTestStore((state) => state.testContent);
   const setTestResults = useTestStore((state) => state.setTestResults);
 
   const [aiDialogVisible, setAIDialogVisible] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<Model | undefined>();
+  const [availableModelGroups, setAvailableModelGroups] = useState<
+    ModelGroup[]
+  >([]);
 
   const [draftId, setDraftId] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
@@ -40,7 +52,14 @@ const EditorPanel = () => {
     [templates, selectedTemplateID],
   );
 
-  if (!selectedTemplate) {return;}
+  useEffect(() => {
+    const groups = getAvailableModelGroups(sdk);
+    setAvailableModelGroups(groups);
+    const firstModel = groups[0]?.models[0];
+    if (firstModel) {
+      setSelectedModel(firstModel);
+    }
+  }, [sdk]);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -86,39 +105,44 @@ const EditorPanel = () => {
     sdk.window.showToast("Template saved", { variant: "success" });
   }, [draftId, draftDescription, draftScript, selectedTemplate, sdk]);
 
-  const onAIAskClick = useCallback(async () => {
+  const onAIGenerateClick = useCallback(async () => {
+    const model = selectedModel;
+    if (!model) {
+      sdk.window.showToast("Please select a model", { variant: "error" });
+      return;
+    }
+    if (!aiPrompt.trim()) {
+      sdk.window.showToast("Please enter a prompt", { variant: "error" });
+      return;
+    }
+
     setAIDialogVisible(false);
-    setDraftScript("");
+    setIsProcessing(true);
 
-    let aiResponse = "";
-    fetchOpenAIStream(
-      settings?.openAIKey ?? "",
-      aiPrompt,
-      aiSystemPrompt,
-      (content: string) => {
-        aiResponse += content;
+    try {
+      const result = await generateTemplate(sdk, model, aiPrompt);
+      setDraftId(result.id);
+      setDraftDescription(result.description);
+      setDraftScript(result.script);
+      sdk.window.showToast("Template generated successfully", {
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Template generation failed:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to generate template";
+      sdk.window.showToast(message, { variant: "error" });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [aiPrompt, selectedModel, sdk]);
 
-        const idMatch = /---ID\s*?\n([\w-]+)/.exec(aiResponse);
-        if (idMatch) {setDraftId(idMatch[1] ?? "");}
-
-        const descriptionMatch = /---DESCRIPTION\s*?\n(.+)/.exec(aiResponse);
-        if (descriptionMatch) {setDraftDescription(descriptionMatch[1] ?? "");}
-
-        const scriptMatch = /---SCRIPT\s*?\n([\s\S]+)/.exec(aiResponse);
-        if (scriptMatch) {setDraftScript(scriptMatch[1] ?? "");}
-      },
-    );
-  }, [aiPrompt, settings]);
-
-  if (isLoading) {return <div>Loading...</div>;}
-  if (isError) {return <div>Error: {error?.message}</div>;}
-  if (!settings) {return <div>No settings</div>;}
-
-  const isAIKeyValid = settings.openAIKey && settings.openAIKey !== "";
+  const hasProviders = availableModelGroups.length > 0;
   const hasUnsavedChanges =
-    draftId !== selectedTemplate?.id ||
-    draftDescription !== selectedTemplate?.description ||
-    draftScript !== selectedTemplate?.modificationScript;
+    selectedTemplate &&
+    (draftId !== selectedTemplate.id ||
+      draftDescription !== selectedTemplate.description ||
+      draftScript !== selectedTemplate.modificationScript);
 
   if (!selectedTemplate) {
     return (
@@ -176,34 +200,86 @@ const EditorPanel = () => {
             Test
           </Button>
           <Button
-            disabled={!isAIKeyValid}
+            disabled={!hasProviders || isProcessing}
             variant="outlined"
             color="info"
-            autoCapitalize="none"
             onClick={() => setAIDialogVisible(true)}
+            startIcon={
+              isProcessing ? <CircularProgress size={16} /> : undefined
+            }
           >
-            AI Generate
+            {isProcessing ? "Generating..." : "AI Generate"}
           </Button>
           <Dialog
             open={aiDialogVisible}
             onClose={() => setAIDialogVisible(false)}
+            maxWidth="sm"
+            fullWidth
           >
             <DialogTitle>Generate script with AI</DialogTitle>
             <DialogContent>
-              <TextareaAutosize
-                placeholder="Prompt"
-                minRows={10}
-                value={aiPrompt}
-                onChange={(e) => setAIPrompt(e.target.value)}
-                style={{
-                  width: "100%",
-                  fontSize: "14px",
-                  background: "var(--c-gray-800)",
-                }}
-              />
-              <Button variant="contained" onClick={onAIAskClick}>
-                Ask AI
-              </Button>
+              {hasProviders ? (
+                <div className="flex flex-col gap-4 mt-2">
+                  <Select
+                    value={
+                      selectedModel
+                        ? `${selectedModel.provider}/${selectedModel.id}`
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      for (const group of availableModelGroups) {
+                        const model = group.models.find(
+                          (m) => `${m.provider}/${m.id}` === value,
+                        );
+                        if (model) {
+                          setSelectedModel(model);
+                          break;
+                        }
+                      }
+                    }}
+                    size="small"
+                    fullWidth
+                  >
+                    {availableModelGroups.flatMap((group) => [
+                      <ListSubheader key={group.label}>
+                        {group.label}
+                      </ListSubheader>,
+                      ...group.models.map((model) => (
+                        <MenuItem
+                          key={`${model.provider}/${model.id}`}
+                          value={`${model.provider}/${model.id}`}
+                        >
+                          {model.name}
+                        </MenuItem>
+                      )),
+                    ])}
+                  </Select>
+                  <TextareaAutosize
+                    placeholder="Describe the bypass template you want to generate..."
+                    minRows={10}
+                    value={aiPrompt}
+                    onChange={(e) => setAIPrompt(e.target.value)}
+                    style={{
+                      width: "100%",
+                      fontSize: "14px",
+                      background: "var(--c-gray-800)",
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={onAIGenerateClick}
+                    disabled={!selectedModel || !aiPrompt.trim()}
+                  >
+                    Generate
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-zinc-400">
+                  No AI providers configured. Configure providers in Caido
+                  Settings &gt; AI.
+                </p>
+              )}
             </DialogContent>
           </Dialog>
         </div>

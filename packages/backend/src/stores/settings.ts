@@ -9,7 +9,6 @@ export class SettingsStore {
     this.settings = {
       templatesDelay: 100,
       scanTimeout: 5 * 60 * 1000,
-      openAIKey: "",
     };
   }
 

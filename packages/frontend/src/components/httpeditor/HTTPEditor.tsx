@@ -9,6 +9,7 @@ type HTTPEditorProps = {
   style?: React.CSSProperties;
   removeFooter?: boolean;
   removeHeader?: boolean;
+  onChange?: (value: string) => void;
 }
 
 type EditorType = HTTPRequestEditor | HTTPResponseEditor;
@@ -19,11 +20,15 @@ export const HTTPEditor: React.FC<HTTPEditorProps> = ({
   style,
   removeFooter = false,
   removeHeader = false,
+  onChange,
 }) => {
   const sdk = useSDKStore.getState().getSDK();
   const editorRef = useRef<EditorType | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onChangeRef = useRef(onChange);
   const [hash, setHash] = useState(window.location.hash);
+
+  onChangeRef.current = onChange;
 
   const setValue = (value: string) => {
     const view = editorRef.current?.getEditorView();
@@ -71,21 +76,13 @@ export const HTTPEditor: React.FC<HTTPEditorProps> = ({
   }, [value]);
 
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const newHash = window.location.hash;
-      if (newHash !== hash) {
-        setHash(newHash);
-      }
-    });
+    const handleHashChange = () => {
+      setHash(window.location.hash);
+    };
 
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-    });
-
-    return () => observer.disconnect();
-  }, [hash]);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   return <div style={{ height: "100%", ...style }} ref={containerRef} />;
 };
