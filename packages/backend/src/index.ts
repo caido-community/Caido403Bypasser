@@ -1,3 +1,5 @@
+import "./polyfills";
+
 import { type DefineAPI, type SDK } from "caido:plugin";
 
 import {
