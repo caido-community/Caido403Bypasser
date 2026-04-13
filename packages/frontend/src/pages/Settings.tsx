@@ -44,42 +44,6 @@ export default function SettingsPage() {
           className="flex flex-col gap-4 p-5 rounded-lg"
           style={{ background: "var(--c-bg-default)", width: "400px" }}
         >
-          <div>
-            <label htmlFor="openAIApiKey" className="block">
-              OpenAI API Key
-            </label>
-            <p className="text-sm text-gray-400 mt-0">
-              Your OpenAI API key to use the GPT-4o-mini API. This is required
-              for AI Generate feature. You can generate it{" "}
-              <a
-                href="https://platform.openai.com/settings/profile?tab=api-keys"
-                target="_blank"
-                rel="noreferrer"
-              >
-                here
-              </a>
-              .
-            </p>
-            <Input
-              id="openAIApiKey"
-              value={draftSettings?.openAIKey}
-              onChange={(e) => updateDraftSettings("openAIKey", e.target.value)}
-              type="password"
-              className="w-full"
-            />
-          </div>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={draftSettings?.openAIKey === data?.openAIKey}
-          >
-            Save
-          </Button>
-        </div>
-        <div
-          className="flex flex-col gap-4 p-5 rounded-lg"
-          style={{ background: "var(--c-bg-default)", width: "400px" }}
-        >
           <div>Template Settings</div>
           <div>
             <label htmlFor="templatesDelay" className="block">

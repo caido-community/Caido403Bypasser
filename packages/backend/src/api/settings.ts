@@ -21,6 +21,13 @@ export const updateSettings = async (
   sdk: SDK,
   newSettings: Settings,
 ): Promise<Result<Settings>> => {
+  if (newSettings.templatesDelay < 0 || newSettings.templatesDelay > 60000) {
+    return { kind: "Error", error: "Templates delay must be between 0 and 60000 ms" };
+  }
+  if (newSettings.scanTimeout < 1000 || newSettings.scanTimeout > 3600000) {
+    return { kind: "Error", error: "Scan timeout must be between 1000 and 3600000 ms" };
+  }
+
   const settingsStore = SettingsStore.get();
 
   settingsStore.updateSettings(newSettings);
@@ -43,8 +50,13 @@ export const loadSettingsFromFile = async (sdk: SDK) => {
   try {
     const _settings = JSON.parse(await readFile(settingsPath, "utf-8"));
     Object.assign(settings, _settings);
-  } catch {
-    // If settings.json doesn't exist, create it. I assume that every error is due to the file not existing, TODO: improve this.
-    await saveSettingsToFile(sdk, settings);
+  } catch (error: unknown) {
+    // If settings.json doesn't exist yet (first run), create it with defaults.
+    // Any other error (e.g. permission denied, malformed JSON) is unexpected and should propagate.
+    if (error instanceof Error && "code" in error && (error as { code: string }).code === "ENOENT") {
+      await saveSettingsToFile(sdk, settings);
+    } else {
+      throw error;
+    }
   }
 };

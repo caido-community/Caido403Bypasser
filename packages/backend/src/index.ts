@@ -1,3 +1,5 @@
+import "./polyfills";
+
 import { type DefineAPI, type SDK } from "caido:plugin";
 
 import {
@@ -113,7 +115,7 @@ export async function init(sdk: SDK<API>) {
 
     setTimeout(() => {
       checkUpdates(sdk);
-      console.log("init");
+      sdk.console.log("init");
     }, 4000);
 
   } catch (error) {

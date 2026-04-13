@@ -11,12 +11,11 @@
     "build": "vite build"
   },
   "dependencies": {
-    "openai": "^5.12.2",
     "shared": "workspace:*",
     "yaml": "2.6.1"
   },
   "devDependencies": {
-    "@caido/sdk-backend": "0.50.2",
-    "@caido/sdk-frontend": "0.50.2"
+    "@caido/sdk-backend": "0.55.3",
+    "@caido/sdk-frontend": "0.55.3"
   }
 }
