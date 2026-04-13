@@ -59,7 +59,7 @@ const EditorPanel = () => {
     if (firstModel) {
       setSelectedModel(firstModel);
     }
-  }, [sdk]);
+  }, []);
 
   useEffect(() => {
     if (selectedTemplate) {

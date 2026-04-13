@@ -136,9 +136,16 @@ export async function generateTemplate(
     throw new Error(`Provider "${model.provider}" is not configured`);
   }
 
-  const provider = sdk.ai.createProvider();
-  const modelKey = `${model.provider}/${model.id}`;
+  let provider;
+  try {
+    provider = sdk.ai.createProvider();
+  } catch (error) {
+    throw new Error(
+      `Failed to create AI provider: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
+  const modelKey = `${model.provider}/${model.id}`;
   const languageModel = provider(modelKey, {
     capabilities: {
       reasoning: false,
@@ -146,14 +153,21 @@ export async function generateTemplate(
     },
   });
 
-  const result = await generateText({
-    model: languageModel,
-    system: aiSystemPrompt,
-    prompt: userPrompt,
-    output: Output.object({
-      schema: templateOutputSchema,
-    }),
-  });
+  let result;
+  try {
+    result = await generateText({
+      model: languageModel,
+      system: aiSystemPrompt,
+      prompt: userPrompt,
+      output: Output.object({
+        schema: templateOutputSchema,
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      `AI generation failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   const output = templateOutputSchema.safeParse(result.output);
   if (!output.success) {
