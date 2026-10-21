@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "fs/promises";
+import { readdir, readFile, writeFile } from "fs/promises";
 import * as path from "path";
 
 import { type SDK } from "caido:plugin";
@@ -46,17 +46,12 @@ export const loadSettingsFromFile = async (sdk: SDK) => {
   const settingsStore = SettingsStore.get();
   const settings = settingsStore.getSettings();
 
-  const settingsPath = path.join(sdk.meta.path(), "settings.json");
-  try {
-    const _settings = JSON.parse(await readFile(settingsPath, "utf-8"));
-    Object.assign(settings, _settings);
-  } catch (error: unknown) {
-    // If settings.json doesn't exist yet (first run), create it with defaults.
-    // Any other error (e.g. permission denied, malformed JSON) is unexpected and should propagate.
-    if (error instanceof Error && "code" in error && (error as { code: string }).code === "ENOENT") {
-      await saveSettingsToFile(sdk, settings);
-    } else {
-      throw error;
-    }
+  // Caido's fs has no existsSync and its errors carry no `code`, so check presence via readdir.
+  const files = await readdir(sdk.meta.path());
+  if (!files.includes("settings.json")) {
+    await saveSettingsToFile(sdk, settings);
   }
+
+  const settingsPath = path.join(sdk.meta.path(), "settings.json");
+  Object.assign(settings, JSON.parse(await readFile(settingsPath, "utf-8")));
 };

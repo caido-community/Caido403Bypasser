@@ -15,7 +15,7 @@
     "yaml": "2.6.1"
   },
   "devDependencies": {
-    "@caido/sdk-backend": "0.55.3",
-    "@caido/sdk-frontend": "0.55.3"
+    "@caido/sdk-backend": "0.59.0",
+    "@caido/sdk-frontend": "0.59.0"
   }
 }

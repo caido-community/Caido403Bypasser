@@ -31,4 +31,4 @@ export type BackendEvents = DefineEvents<{
   "plugin:outdated": () => void;
 }>;
 
-export type CaidoBackendSDK = SDK<never, BackendEvents>;
+export type CaidoBackendSDK = SDK<unknown, BackendEvents>;
