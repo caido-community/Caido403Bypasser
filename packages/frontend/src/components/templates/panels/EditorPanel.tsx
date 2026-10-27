@@ -34,7 +34,9 @@ const EditorPanel = () => {
   const [aiDialogVisible, setAIDialogVisible] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedModelKey, setSelectedModelKey] = useState("");
+  const [selectedModelKey, setSelectedModelKey] = useState<
+    string | undefined
+  >(undefined);
   const availableModelGroups = useModelsStore((state) => state.modelGroups);
 
   const [draftId, setDraftId] = useState("");
@@ -48,15 +50,19 @@ const EditorPanel = () => {
 
   const selectedModel = useMemo(() => {
     const models = availableModelGroups.flatMap((group) => group.models);
-    return (
-      models.find((model) => getModelKey(model) === selectedModelKey) ??
-      models[0]
-    );
+    if (selectedModelKey === undefined) {
+      return models[0];
+    }
+    return models.find((model) => getModelKey(model) === selectedModelKey);
   }, [availableModelGroups, selectedModelKey]);
 
   useEffect(() => {
-    setSelectedModelKey(selectedModel ? getModelKey(selectedModel) : "");
-  }, [selectedModel]);
+    if (selectedModelKey === undefined && selectedModel) {
+      setSelectedModelKey(getModelKey(selectedModel));
+    } else if (selectedModelKey && !selectedModel) {
+      setSelectedModelKey("");
+    }
+  }, [selectedModel, selectedModelKey]);
 
   useEffect(() => {
     if (selectedTemplate) {
