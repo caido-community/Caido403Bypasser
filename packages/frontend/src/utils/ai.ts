@@ -1,124 +1,59 @@
+import type {
+  AIUpstreamModel,
+  AIUpstreamProvider,
+  AIUpstreamProviderKind,
+} from "@caido/sdk-frontend";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
 import type { FrontendSDK } from "@/types/types";
 import { aiSystemPrompt } from "@/constants";
 
-export const ModelProvider = {
-  OpenRouter: "openrouter",
-  OpenAI: "openai",
-  Anthropic: "anthropic",
-  Google: "google",
-} as const;
-
-export type ModelProvider = (typeof ModelProvider)[keyof typeof ModelProvider];
-
-export interface Model {
-  id: string;
-  name: string;
-  provider: ModelProvider;
-}
-
-export interface ModelGroup {
+export type ModelGroup = {
   label: string;
-  provider: ModelProvider;
-  models: Model[];
+  provider: string;
+  models: AIUpstreamModel[];
+};
+
+const PROVIDER_LABELS: Partial<Record<AIUpstreamProviderKind, string>> = {
+  ANTHROPIC: "Anthropic",
+  BEDROCK: "Bedrock",
+  CHATGPT: "ChatGPT",
+  GEMINI: "Gemini",
+  OPENAI: "OpenAI",
+  OPENROUTER: "OpenRouter",
+  XAI: "xAI",
+};
+
+function getProviderLabel(provider: AIUpstreamProvider) {
+  if (provider.kind === "XAI" && provider.auth === "OAUTH") {
+    return "Grok";
+  }
+  return PROVIDER_LABELS[provider.kind] ?? provider.id;
 }
 
-const MODEL_GROUPS: ModelGroup[] = [
-  {
-    label: "OpenAI",
-    provider: ModelProvider.OpenAI,
-    models: [
-      { id: "gpt-5.4", name: "GPT 5.4", provider: ModelProvider.OpenAI },
-      {
-        id: "gpt-5.4-nano",
-        name: "GPT 5.4 Nano",
-        provider: ModelProvider.OpenAI,
-      },
-      {
-        id: "gpt-5.3-codex",
-        name: "GPT 5.3 Codex",
-        provider: ModelProvider.OpenAI,
-      },
-    ],
-  },
-  {
-    label: "Anthropic",
-    provider: ModelProvider.Anthropic,
-    models: [
-      {
-        id: "claude-sonnet-4-6",
-        name: "Sonnet 4.6",
-        provider: ModelProvider.Anthropic,
-      },
-      {
-        id: "claude-opus-4-6",
-        name: "Opus 4.6",
-        provider: ModelProvider.Anthropic,
-      },
-    ],
-  },
-  {
-    label: "Google",
-    provider: ModelProvider.Google,
-    models: [
-      {
-        id: "gemini-3.1-pro-preview-customtools",
-        name: "Gemini 3.1 Pro",
-        provider: ModelProvider.Google,
-      },
-      {
-        id: "gemini-3-flash-preview",
-        name: "Gemini 3 Flash",
-        provider: ModelProvider.Google,
-      },
-    ],
-  },
-  {
-    label: "OpenRouter",
-    provider: ModelProvider.OpenRouter,
-    models: [
-      {
-        id: "openai/gpt-5.4",
-        name: "GPT 5.4",
-        provider: ModelProvider.OpenRouter,
-      },
-      {
-        id: "openai/gpt-5.4-nano",
-        name: "GPT 5.4 Nano",
-        provider: ModelProvider.OpenRouter,
-      },
-      {
-        id: "anthropic/claude-sonnet-4.6",
-        name: "Sonnet 4.6",
-        provider: ModelProvider.OpenRouter,
-      },
-      {
-        id: "anthropic/claude-opus-4.6",
-        name: "Opus 4.6",
-        provider: ModelProvider.OpenRouter,
-      },
-      {
-        id: "google/gemini-3-flash-preview",
-        name: "Gemini 3 Flash",
-        provider: ModelProvider.OpenRouter,
-      },
-    ],
-  },
-];
+export function getModelKey(model: AIUpstreamModel) {
+  return JSON.stringify([model.providerId, model.id]);
+}
 
-export function isProviderConfigured(
-  sdk: FrontendSDK,
-  provider: ModelProvider,
-): boolean {
-  return sdk.ai
+export function getModelGroups(sdk: FrontendSDK): ModelGroup[] {
+  const models = sdk.ai.getUpstreamModels();
+  const groups = sdk.ai
     .getUpstreamProviders()
-    .some((p) => p.id === provider && p.status === "Ready");
-}
-
-export function getAvailableModelGroups(sdk: FrontendSDK): ModelGroup[] {
-  return MODEL_GROUPS.filter((g) => isProviderConfigured(sdk, g.provider));
+    .map((provider) => ({
+      label: getProviderLabel(provider),
+      provider: provider.id,
+      models: models.filter((model) => model.providerId === provider.id),
+    }))
+    .filter((group) => group.models.length > 0);
+  return groups.map((group) => ({
+    ...group,
+    label: groups.some(
+      (other) => other !== group && other.label === group.label,
+    )
+      ? `${group.label} (${group.provider})`
+      : group.label,
+  }));
 }
 
 const templateOutputSchema = z.object({
@@ -129,11 +64,14 @@ const templateOutputSchema = z.object({
 
 export async function generateTemplate(
   sdk: FrontendSDK,
-  model: Model,
+  model: AIUpstreamModel,
   userPrompt: string,
 ): Promise<{ id: string; description: string; script: string }> {
-  if (!isProviderConfigured(sdk, model.provider)) {
-    throw new Error(`Provider "${model.provider}" is not configured`);
+  const isAvailable = getModelGroups(sdk).some((group) =>
+    group.models.some((m) => getModelKey(m) === getModelKey(model)),
+  );
+  if (!isAvailable) {
+    throw new Error(`Model "${model.modelId}" is no longer available`);
   }
 
   let provider;
@@ -145,13 +83,7 @@ export async function generateTemplate(
     );
   }
 
-  const modelKey = `${model.provider}/${model.id}`;
-  const languageModel = provider(modelKey, {
-    capabilities: {
-      reasoning: false,
-      structured_output: true,
-    },
-  });
+  const languageModel = provider(model.modelId);
 
   let result;
   try {

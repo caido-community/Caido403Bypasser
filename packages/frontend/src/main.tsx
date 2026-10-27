@@ -3,6 +3,7 @@ import App from "./App";
 import { runScan } from "@/scan/scan";
 import { FrontendSDK } from "@/types/types";
 import { initializeSDK } from "@/stores/sdkStore";
+import { initializeModels } from "@/stores/modelsStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { initializeEvents as initializeScansEvents } from "@/stores/scansStore";
 import { initializeEvents as initializeTemplateResultsEvents } from "@/stores/templateResultsStore";
@@ -12,6 +13,7 @@ const queryClient = new QueryClient();
 
 export const init = (sdk: FrontendSDK) => {
   initializeSDK(sdk);
+  initializeModels(sdk);
 
   initializeScansEvents(sdk, queryClient);
   initializeTemplateResultsEvents(sdk, queryClient);

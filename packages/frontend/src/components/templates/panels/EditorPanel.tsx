@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { handleBackendCall } from "@/utils/utils";
-import {
-  generateTemplate,
-  getAvailableModelGroups,
-  type Model,
-  type ModelGroup,
-} from "@/utils/ai";
+import { generateTemplate, getModelKey } from "@/utils/ai";
+import { useModelsStore } from "@/stores/modelsStore";
 import { useSDKStore } from "@/stores/sdkStore";
 import { runScript, Template } from "shared";
 import AceEditor from "react-ace";
@@ -38,10 +34,10 @@ const EditorPanel = () => {
   const [aiDialogVisible, setAIDialogVisible] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model | undefined>();
-  const [availableModelGroups, setAvailableModelGroups] = useState<
-    ModelGroup[]
-  >([]);
+  const [selectedModelKey, setSelectedModelKey] = useState<
+    string | undefined
+  >(undefined);
+  const availableModelGroups = useModelsStore((state) => state.modelGroups);
 
   const [draftId, setDraftId] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
@@ -52,14 +48,21 @@ const EditorPanel = () => {
     [templates, selectedTemplateID],
   );
 
-  useEffect(() => {
-    const groups = getAvailableModelGroups(sdk);
-    setAvailableModelGroups(groups);
-    const firstModel = groups[0]?.models[0];
-    if (firstModel) {
-      setSelectedModel(firstModel);
+  const selectedModel = useMemo(() => {
+    const models = availableModelGroups.flatMap((group) => group.models);
+    if (selectedModelKey === undefined) {
+      return models[0];
     }
-  }, []);
+    return models.find((model) => getModelKey(model) === selectedModelKey);
+  }, [availableModelGroups, selectedModelKey]);
+
+  useEffect(() => {
+    if (selectedModelKey === undefined && selectedModel) {
+      setSelectedModelKey(getModelKey(selectedModel));
+    } else if (selectedModelKey && !selectedModel) {
+      setSelectedModelKey("");
+    }
+  }, [selectedModel, selectedModelKey]);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -137,7 +140,7 @@ const EditorPanel = () => {
     }
   }, [aiPrompt, selectedModel, sdk]);
 
-  const hasProviders = availableModelGroups.length > 0;
+  const hasModels = availableModelGroups.length > 0;
   const hasUnsavedChanges =
     selectedTemplate &&
     (draftId !== selectedTemplate.id ||
@@ -200,7 +203,7 @@ const EditorPanel = () => {
             Test
           </Button>
           <Button
-            disabled={!hasProviders || isProcessing}
+            disabled={isProcessing}
             variant="outlined"
             color="info"
             onClick={() => setAIDialogVisible(true)}
@@ -218,39 +221,24 @@ const EditorPanel = () => {
           >
             <DialogTitle>Generate script with AI</DialogTitle>
             <DialogContent>
-              {hasProviders ? (
+              {hasModels ? (
                 <div className="flex flex-col gap-4 mt-2">
                   <Select
-                    value={
-                      selectedModel
-                        ? `${selectedModel.provider}/${selectedModel.id}`
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      for (const group of availableModelGroups) {
-                        const model = group.models.find(
-                          (m) => `${m.provider}/${m.id}` === value,
-                        );
-                        if (model) {
-                          setSelectedModel(model);
-                          break;
-                        }
-                      }
-                    }}
+                    value={selectedModel ? getModelKey(selectedModel) : ""}
+                    onChange={(e) => setSelectedModelKey(e.target.value)}
                     size="small"
                     fullWidth
                   >
                     {availableModelGroups.flatMap((group) => [
-                      <ListSubheader key={group.label}>
+                      <ListSubheader key={group.provider}>
                         {group.label}
                       </ListSubheader>,
                       ...group.models.map((model) => (
                         <MenuItem
-                          key={`${model.provider}/${model.id}`}
-                          value={`${model.provider}/${model.id}`}
+                          key={getModelKey(model)}
+                          value={getModelKey(model)}
                         >
-                          {model.name}
+                          {model.displayName}
                         </MenuItem>
                       )),
                     ])}
@@ -276,7 +264,7 @@ const EditorPanel = () => {
                 </div>
               ) : (
                 <p className="text-zinc-400">
-                  No AI providers configured. Configure providers in Caido
+                  No AI models available. Configure providers in Caido
                   Settings &gt; AI.
                 </p>
               )}
