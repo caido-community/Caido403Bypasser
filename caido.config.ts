@@ -11,7 +11,7 @@ export default defineConfig({
   id,
   name: "403Bypasser",
   description: "Bypass a 403 page with a set of templates",
-  version: "1.4.0",
+  version: "1.4.1",
   author: {
     name: "bebiks",
     email: "lukasz@caido.io",
