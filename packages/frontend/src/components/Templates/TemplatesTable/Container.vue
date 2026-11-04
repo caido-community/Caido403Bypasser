@@ -90,12 +90,14 @@ const onDelete = (template: Template) =>
         </template>
         <Column class="w-16">
           <template #body="{ data }">
-            <ToggleSwitch
-              :model-value="data.enabled"
-              :aria-label="`Enable ${data.id}`"
-              @click.stop
-              @update:model-value="store.toggle(data)"
-            />
+            <div class="flex items-center">
+              <ToggleSwitch
+                :model-value="data.enabled"
+                :aria-label="`Enable ${data.id}`"
+                @click.stop
+                @update:model-value="store.toggle(data)"
+              />
+            </div>
           </template>
         </Column>
         <Column header="Template" class="max-w-0">
