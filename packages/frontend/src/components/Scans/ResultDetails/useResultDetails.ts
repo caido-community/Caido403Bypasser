@@ -20,7 +20,10 @@ export const useResultDetails = () => {
       }
 
       const result = await sdk.backend.getResultDetails(scanId, resultId);
-      if (store.selectedResultId !== resultId) {
+      if (
+        store.selectedScanId !== scanId ||
+        store.selectedResultId !== resultId
+      ) {
         return;
       }
       if (result.kind === "Ok") {

@@ -10,11 +10,16 @@ import { useSettingsStore } from "@/stores/settings";
 
 const store = useSettingsStore();
 
-const save = useDebounceFn((settings: Settings) => store.update(settings), 400);
+const save = useDebounceFn(async () => {
+  if (store.settings !== undefined) {
+    await store.update(store.settings);
+  }
+}, 400);
 
 const setField = (field: keyof Settings, value: number | undefined) => {
   if (store.settings !== undefined && value !== undefined) {
-    save({ ...store.settings, [field]: value });
+    store.settings = { ...store.settings, [field]: value };
+    save();
   }
 };
 </script>

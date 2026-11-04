@@ -7,23 +7,26 @@ import { useTemplatesStore } from "@/stores/templates";
 
 export const useTemplateEditor = () => {
   const store = useTemplatesStore();
-  const original = store.selected;
-  const draft = ref<Template>({ ...(original ?? createDraftTemplate()) });
+  const isNew = store.selected === undefined;
+  const draft = ref<Template>({ ...(store.selected ?? createDraftTemplate()) });
 
-  const isDirty = computed(
-    () =>
-      original === undefined ||
-      draft.value.id !== original.id ||
-      draft.value.description !== original.description ||
-      draft.value.modificationScript !== original.modificationScript,
-  );
+  const isDirty = computed(() => {
+    const saved = store.selected;
+    return (
+      saved === undefined ||
+      draft.value.id !== saved.id ||
+      draft.value.description !== saved.description ||
+      draft.value.modificationScript !== saved.modificationScript
+    );
+  });
 
   const isSaving = ref(false);
   const save = async () => {
+    const saved = store.selected;
     isSaving.value = true;
-    await store.save(original?.id, {
+    await store.save(saved?.id, {
       ...draft.value,
-      enabled: original?.enabled ?? true,
+      enabled: saved?.enabled ?? true,
     });
     isSaving.value = false;
   };
@@ -34,7 +37,7 @@ export const useTemplateEditor = () => {
 
   return {
     draft,
-    isNew: original === undefined,
+    isNew,
     isDirty,
     isSaving,
     save,

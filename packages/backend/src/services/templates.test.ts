@@ -90,6 +90,20 @@ describe("templates service", () => {
     expect(onChange).toHaveBeenLastCalledWith([]);
   });
 
+  it("treats IDs differing only in case as the same file", async () => {
+    const { service } = setup();
+    await service.load();
+    await service.clear();
+    await service.save(undefined, custom);
+
+    expect(
+      (await service.save(undefined, { ...custom, id: "CUSTOM" })).kind,
+    ).toBe("Error");
+    await service.save("custom", { ...custom, id: "Custom" });
+    expect(await readdir(dir)).toEqual(["Custom.yaml"]);
+    expect(service.list().map((t) => t.id)).toEqual(["Custom"]);
+  });
+
   it("rejects invalid templates and unknown IDs", async () => {
     const { service } = setup();
     await service.load();

@@ -171,6 +171,25 @@ describe("scans service", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it("drops in-flight results of deleted scans", async () => {
+    let finishSend: (value: unknown) => void = () => {};
+    const { service, emit } = setup({
+      send: () =>
+        new Promise((resolve) => {
+          finishSend = resolve;
+        }),
+    });
+
+    const scan = service.start(target);
+    await settle();
+    service.remove(scan.id);
+    emit.mockClear();
+    finishSend(sent());
+    await settle();
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
   it("deletes, clears and reruns scans", async () => {
     const { service, emit } = setup();
 

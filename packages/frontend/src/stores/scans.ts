@@ -101,25 +101,6 @@ export const useScansStore = defineStore("scans", () => {
     showResult(sdk, await sdk.backend.clearScans());
   };
 
-  const sendRawToReplay = async (scan: Scan, resultId: number) => {
-    const details = await sdk.backend.getResultDetails(scan.id, resultId);
-    if (!showResult(sdk, details)) {
-      return false;
-    }
-    if (details.value.request === undefined) {
-      sdk.window.showToast("This result has no request to send", {
-        variant: "warning",
-      });
-      return false;
-    }
-    await sdk.replay.createSession({
-      type: "Raw",
-      raw: details.value.request,
-      connectionInfo: { host: scan.host, port: scan.port, isTLS: scan.isTls },
-    });
-    return true;
-  };
-
   const sendToReplay = async (resultId: number) => {
     const scan = selectedScan.value;
     const result = results.value.find((r) => r.id === resultId);
@@ -130,8 +111,26 @@ export const useScansStore = defineStore("scans", () => {
     try {
       if (result.kind === "Ok") {
         await sdk.replay.createSession({ type: "ID", id: result.requestId });
-      } else if (!(await sendRawToReplay(scan, result.id))) {
-        return;
+      } else {
+        const details = await sdk.backend.getResultDetails(scan.id, result.id);
+        if (!showResult(sdk, details)) {
+          return;
+        }
+        if (details.value.request === undefined) {
+          sdk.window.showToast("This result has no request to send", {
+            variant: "warning",
+          });
+          return;
+        }
+        await sdk.replay.createSession({
+          type: "Raw",
+          raw: details.value.request,
+          connectionInfo: {
+            host: scan.host,
+            port: scan.port,
+            isTLS: scan.isTls,
+          },
+        });
       }
       sdk.window.showToast("Sent to Replay", { variant: "success" });
     } catch (error) {

@@ -27,7 +27,6 @@ export type Scan = {
   isTls: boolean;
   status: ScanStatus;
   startedAt: number;
-  finishedAt: number | undefined;
   sent: number;
   total: number;
 };

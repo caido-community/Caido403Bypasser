@@ -12,7 +12,7 @@ import {
 } from "shared";
 
 import type { BackendSDK } from "../types";
-import { encodeRaw, toBinaryString } from "../utils/bytes";
+import { decodeRaw, encodeRaw, toBinaryString } from "../utils/bytes";
 import { getErrorMessage } from "../utils/errors";
 
 import type { SettingsService } from "./settings";
@@ -59,7 +59,6 @@ export class ScansService {
         isTls: target.isTls,
         status: "Running",
         startedAt: Date.now(),
-        finishedAt: undefined,
         sent: 0,
         total: 0,
       },
@@ -122,8 +121,9 @@ export class ScansService {
     }
 
     if (result.kind === "Error") {
+      const raw = entry.failedRequests.get(resultId);
       return ok({
-        request: entry.failedRequests.get(resultId),
+        request: raw === undefined ? undefined : decodeRaw(raw),
         response: undefined,
       });
     }
@@ -189,18 +189,22 @@ export class ScansService {
       }
 
       const id = entry.results.length + 1;
-      try {
-        const sent = await this.send(entry.target, raw);
-        this.addResult(entry, { kind: "Ok", id, templateId, ...sent });
-      } catch (error) {
-        entry.failedRequests.set(id, raw);
-        this.addResult(entry, {
-          kind: "Error",
-          id,
-          templateId,
-          error: getErrorMessage(error),
-        });
+      const result = await this.send(entry.target, raw).then(
+        (sent): ScanResult => ({ kind: "Ok", id, templateId, ...sent }),
+        (error: unknown): ScanResult => {
+          entry.failedRequests.set(id, raw);
+          return {
+            kind: "Error",
+            id,
+            templateId,
+            error: getErrorMessage(error),
+          };
+        },
+      );
+      if (this.entries.get(entry.scan.id) !== entry) {
+        return;
       }
+      this.addResult(entry, result);
       entry.scan.sent += 1;
       this.sdk.api.send("scan:updated", entry.scan);
     }
@@ -243,7 +247,6 @@ export class ScansService {
 
   private finish(entry: Entry, status: ScanStatus) {
     entry.scan.status = status;
-    entry.scan.finishedAt = Date.now();
     this.sdk.api.send("scan:updated", entry.scan);
   }
 

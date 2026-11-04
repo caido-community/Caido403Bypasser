@@ -10,6 +10,9 @@ import type { BackendSDK } from "../types";
 
 const toYaml = (template: Template) => dump(template, { lineWidth: -1 });
 
+const sameFileName = (a: string, b: string) =>
+  a.toLowerCase() === b.toLowerCase();
+
 export class TemplatesService {
   private readonly templates = new Map<string, Template>();
   private readonly dir: string;
@@ -38,7 +41,7 @@ export class TemplatesService {
     }
 
     for (const file of await readdir(dir)) {
-      if (path.extname(file).toLowerCase() !== ".yaml") {
+      if (!file.endsWith(".yaml")) {
         continue;
       }
 
@@ -79,13 +82,21 @@ export class TemplatesService {
     if (previousId !== undefined && !this.templates.has(previousId)) {
       return err(`Template ${previousId} not found`);
     }
-    if (template.id !== previousId && this.templates.has(template.id)) {
+    const isTaken = [...this.templates.keys()].some(
+      (id) => id !== previousId && sameFileName(id, template.id),
+    );
+    if (isTaken) {
       return err(`Template ${template.id} already exists`);
     }
 
+    const isRename = previousId !== undefined && previousId !== template.id;
+    // On case-insensitive filesystems a case-only rename targets the same file, so drop the old name first.
+    if (isRename && sameFileName(previousId, template.id)) {
+      await this.removeFile(previousId);
+    }
     await this.write(template);
-    if (previousId !== undefined && previousId !== template.id) {
-      await rm(this.fileOf(previousId));
+    if (isRename) {
+      await this.removeFile(previousId);
       this.templates.delete(previousId);
     }
     this.changed();
@@ -97,7 +108,7 @@ export class TemplatesService {
       return err(`Template ${id} not found`);
     }
 
-    await rm(this.fileOf(id));
+    await this.removeFile(id);
     this.templates.delete(id);
     this.changed();
     return ok(undefined);
@@ -135,6 +146,10 @@ export class TemplatesService {
     return path.join(this.dir, `${id}.yaml`);
   }
 
+  private removeFile(id: string) {
+    return rm(this.fileOf(id), { force: true });
+  }
+
   private changed() {
     this.sdk.api.send("templates:changed", this.list());
   }
@@ -152,7 +167,7 @@ export class TemplatesService {
 
   private async removeAll() {
     for (const id of this.templates.keys()) {
-      await rm(this.fileOf(id));
+      await this.removeFile(id);
     }
     this.templates.clear();
   }

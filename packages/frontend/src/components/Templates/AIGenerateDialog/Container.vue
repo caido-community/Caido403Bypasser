@@ -15,13 +15,12 @@ const emit = defineEmits<{ generated: [template: GeneratedTemplate] }>();
 
 const visible = ref(false);
 const { modelGroups, selectedModelId, prompt, isGenerating, generate, cancel } =
-  useAIGenerate(
-    () => draft,
-    (template) => emit("generated", template),
-  );
+  useAIGenerate(() => draft);
 
 const onGenerate = async () => {
-  if (await generate()) {
+  const template = await generate();
+  if (template !== undefined) {
+    emit("generated", template);
     visible.value = false;
     prompt.value = "";
   }

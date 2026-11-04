@@ -3,16 +3,13 @@ import { useStorage } from "@vueuse/core";
 import type { Template } from "shared";
 import { computed, onBeforeUnmount, ref } from "vue";
 
-import { type GeneratedTemplate, generateTemplate } from "@/ai/generate";
+import { generateTemplate } from "@/ai/generate";
 import { useSDK } from "@/plugins/sdk";
 import { useTemplatesStore } from "@/stores/templates";
 import { getErrorMessage } from "@/utils/errors";
 import { toCrlf } from "@/utils/request";
 
-export const useAIGenerate = (
-  draft: () => Template,
-  onGenerated: (template: GeneratedTemplate) => void,
-) => {
+export const useAIGenerate = (draft: () => Template) => {
   const sdk = useSDK();
   const store = useTemplatesStore();
 
@@ -49,24 +46,26 @@ export const useAIGenerate = (
 
   const generate = async () => {
     const modelId = selectedModelId.value;
-    if (modelId === undefined || prompt.value.trim() === "") {
-      return false;
+    if (
+      isGenerating.value ||
+      modelId === undefined ||
+      prompt.value.trim() === ""
+    ) {
+      return undefined;
     }
 
     controller = new AbortController();
     isGenerating.value = true;
     try {
-      onGenerated(
-        await generateTemplate({
-          model: sdk.ai.createProvider()(modelId),
-          prompt: prompt.value,
-          draft: draft(),
-          testRequest: toCrlf(store.testRequest),
-          abortSignal: controller.signal,
-        }),
-      );
+      const template = await generateTemplate({
+        model: sdk.ai.createProvider()(modelId),
+        prompt: prompt.value,
+        draft: draft(),
+        testRequest: toCrlf(store.testRequest),
+        abortSignal: controller.signal,
+      });
       sdk.window.showToast("Template generated", { variant: "success" });
-      return true;
+      return template;
     } catch (error) {
       if (!controller.signal.aborted) {
         sdk.window.showToast(
@@ -76,7 +75,7 @@ export const useAIGenerate = (
           },
         );
       }
-      return false;
+      return undefined;
     } finally {
       isGenerating.value = false;
     }

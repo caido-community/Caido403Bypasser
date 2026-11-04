@@ -1,3 +1,5 @@
+import { Buffer } from "buffer";
+
 export const toBinaryString = (bytes: Uint8Array) => {
   let text = "";
   for (const byte of bytes) {
@@ -32,3 +34,7 @@ export const encodeRaw = (raw: string) => {
   }
   return new Uint8Array(bytes);
 };
+
+// Caido's runtime has no TextDecoder.
+export const decodeRaw = (raw: string) =>
+  Buffer.from(encodeRaw(raw)).toString("utf8");
