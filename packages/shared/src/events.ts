@@ -1,4 +1,10 @@
-// Events the backend can emit to the frontend.
-// Add entries as `"event:name": (payload: Payload) => void;` and emit them
-// from the backend with `sdk.api.send("event:name", payload)`.
-export type Events = Record<string, never>;
+import type { Scan, ScanResult } from "./scan";
+import type { Template } from "./template";
+
+export type Events = {
+  "templates:changed": (templates: Template[]) => void;
+  "scan:updated": (scan: Scan) => void;
+  "scan:deleted": (id: number) => void;
+  "scans:cleared": () => void;
+  "result:created": (scanId: number, result: ScanResult) => void;
+};

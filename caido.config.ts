@@ -11,12 +11,12 @@ const id = "bypasser";
 export default defineConfig({
   id,
   name: "403Bypasser",
-  description: "Plugin template with frontend using VueJS",
-  version: "0.0.0",
+  description: "Bypass 403 pages with a set of request-mutating templates",
+  version: "2.0.0",
   author: {
-    name: "Caido Labs Inc.",
-    email: "dev@caido.io",
-    url: "https://caido.io",
+    name: "bebiks",
+    email: "lukasz@caido.io",
+    url: "https://github.com/caido-community/Caido403Bypasser",
   },
   plugins: [
     {

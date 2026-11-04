@@ -21,7 +21,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@caido/sdk-shared": "0.2.2"
+    "@caido/sdk-shared": "0.2.2",
+    "ts-http-forge": "0.1.7",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "tsdown": "0.22.3"

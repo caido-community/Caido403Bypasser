@@ -8,9 +8,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "shared": "workspace:@caido-community/bypasser@*"
+    "shared": "workspace:@caido-community/bypasser@*",
+    "yaml": "2.9.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@caido/sdk-backend": "0.57.0"
+    "@caido/sdk-backend": "0.59.0"
   }
 }
