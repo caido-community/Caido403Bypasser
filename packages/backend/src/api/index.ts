@@ -29,7 +29,8 @@ export const registerApi = (
 ) => {
   sdk.api.register("getTemplates", () => ok(templates.list()));
   sdk.api.register("saveTemplate", (_, previousId, template) =>
-    guard(() => templates.save(previousId, template)),
+    // Caido's RPC sends `undefined` arguments as `null`.
+    guard(() => templates.save(previousId ?? undefined, template)),
   );
   sdk.api.register("deleteTemplate", (_, id) =>
     guard(() => templates.remove(id)),

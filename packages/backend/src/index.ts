@@ -1,3 +1,6 @@
+// eslint-disable-next-line import/order -- must run before yaml is evaluated
+import "./polyfills";
+
 import path from "path";
 
 import { registerApi } from "./api";

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "shared": "workspace:@caido-community/bypasser@*",
-    "yaml": "2.9.1",
+    "yaml": "2.6.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
