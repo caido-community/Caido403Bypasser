@@ -1,6 +1,7 @@
-import { defineConfig } from "@caido-community/dev";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from '@caido-community/dev';
+import vue from '@vitejs/plugin-vue';
 import tailwindcss from "tailwindcss";
+// @ts-expect-error no declared types at this time
 import tailwindPrimeui from "tailwindcss-primeui";
 import tailwindCaido from "@caido/tailwindcss";
 import path from "path";
@@ -10,12 +11,12 @@ const id = "bypasser";
 export default defineConfig({
   id,
   name: "403Bypasser",
-  description: "Bypass a 403 page with a set of templates",
-  version: "1.5.0",
+  description: "Plugin template with frontend using VueJS",
+  version: "0.0.0",
   author: {
-    name: "bebiks",
-    email: "lukasz@caido.io",
-    url: "https://github.com/caido-community/Caido403Bypasser",
+    name: "Caido Labs Inc.",
+    email: "dev@caido.io",
+    url: "https://caido.io",
   },
   plugins: [
     {
@@ -24,31 +25,32 @@ export default defineConfig({
       root: "packages/backend",
     },
     {
-      kind: "frontend",
+      kind: 'frontend',
       id: "frontend",
-      root: "packages/frontend",
+      root: 'packages/frontend',
       backend: {
         id: "backend",
       },
       vite: {
-        // @ts-expect-error
-        plugins: [react()],
+        plugins: [vue()],
         build: {
           rollupOptions: {
             external: [
-              "@caido/frontend-sdk",
-              "@codemirror/autocomplete",
-              "@codemirror/commands",
-              "@codemirror/language",
-              "@codemirror/lint",
-              "@codemirror/search",
-              "@codemirror/state",
-              "@codemirror/view",
-              "@lezer/common",
-              "@lezer/highlight",
+              '@caido/frontend-sdk', 
+              "@codemirror/autocomplete", 
+              "@codemirror/commands", 
+              "@codemirror/language", 
+              "@codemirror/lint", 
+              "@codemirror/search", 
+              "@codemirror/state", 
+              "@codemirror/view", 
+              "@lezer/common", 
+              "@lezer/highlight", 
               "@lezer/lr",
-            ],
-          },
+              "vue",
+
+            ]
+          }
         },
         resolve: {
           alias: [
@@ -67,14 +69,22 @@ export default defineConfig({
                 corePlugins: {
                   preflight: false,
                 },
-                content: ["./packages/frontend/src/**/*.{ts,tsx}"],
+                content: [
+                  './packages/frontend/src/**/*.{vue,ts}',
+                  './node_modules/@caido/primevue/dist/primevue.mjs'
+                ],
                 darkMode: ["selector", '[data-mode="dark"]'],
-                plugins: [tailwindPrimeui, tailwindCaido],
-              }),
-            ],
-          },
-        },
-      },
-    },
-  ],
+                plugins: [
+
+                  tailwindPrimeui,
+
+                  tailwindCaido,
+                ],
+              })
+            ]
+          }
+        }
+      }
+    }
+  ]
 });

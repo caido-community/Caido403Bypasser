@@ -3,10 +3,6 @@ name: 🚀 Release
 on:
   workflow_dispatch:
 
-env:
-  NODE_VERSION: 20
-  PNPM_VERSION: 9
-
 jobs:
   release:
     name: Release
@@ -15,19 +11,21 @@ jobs:
       contents: write
 
     steps:
+      - name: Verify main branch
+        run: |
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+            echo "Release can only be done on the main branch."
+            exit 1
+          fi
+
       - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v2
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: true
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Build package
         run: pnpm build
