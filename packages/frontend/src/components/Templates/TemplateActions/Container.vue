@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Button from "primevue/button";
-import Menu from "primevue/menu";
 import { useConfirm } from "primevue/useconfirm";
 import { ref } from "vue";
 
@@ -25,27 +24,34 @@ const requireConfirm = (message: string, accept: () => void) =>
     accept,
   });
 
-const menu = ref<InstanceType<typeof Menu>>();
-const menuItems = [
-  {
-    label: "Restore defaults",
-    icon: "fas fa-undo",
-    command: () =>
-      requireConfirm(
-        "All templates will be replaced with the default templates.",
-        () => store.reset(),
-      ),
-  },
-  {
-    label: "Delete all",
-    icon: "fas fa-trash",
-    command: () =>
-      requireConfirm("All templates will be deleted.", () => store.clear()),
-  },
-];
+const onRestore = () =>
+  requireConfirm(
+    "All templates will be replaced with the default templates.",
+    () => store.reset(),
+  );
+
+const onDeleteAll = () =>
+  requireConfirm("All templates will be deleted.", () => store.clear());
 </script>
 
 <template>
+  <Button
+    label="Restore defaults"
+    icon="fas fa-undo"
+    severity="secondary"
+    outlined
+    size="small"
+    @click="onRestore"
+  />
+  <Button
+    label="Delete all"
+    icon="fas fa-trash"
+    severity="danger"
+    outlined
+    size="small"
+    :disabled="store.templates.length === 0"
+    @click="onDeleteAll"
+  />
   <Button
     label="Import"
     icon="fas fa-file-import"
@@ -60,15 +66,6 @@ const menuItems = [
     size="small"
     @click="store.selection = { kind: 'New' }"
   />
-  <Button
-    icon="fas fa-ellipsis-v"
-    severity="secondary"
-    text
-    size="small"
-    aria-label="More actions"
-    @click="menu?.toggle($event)"
-  />
-  <Menu ref="menu" :model="menuItems" popup />
   <input
     ref="importInput"
     type="file"
