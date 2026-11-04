@@ -1,14 +1,17 @@
 import type { ScanStatus } from "shared";
 
-const severities: Record<ScanStatus, string> = {
-  Running: "info",
-  Completed: "success",
-  Cancelled: "secondary",
-  TimedOut: "warn",
-  Failed: "danger",
+const statusClasses: Record<ScanStatus, string> = {
+  Running: "text-surface-300",
+  Completed: "text-green-400",
+  Cancelled: "text-surface-400",
+  TimedOut: "text-orange-400",
+  Failed: "text-red-400",
 };
 
-export const statusSeverity = (status: ScanStatus) => severities[status];
+export const statusClass = (status: ScanStatus) => statusClasses[status];
+
+export const statusLabel = (status: ScanStatus) =>
+  status === "TimedOut" ? "Timed out" : status;
 
 export const statusCodeClass = (code: number | undefined) => {
   if (code === undefined) {

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import Card from "primevue/card";
+import ContextMenu from "primevue/contextmenu";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
 import InputText from "primevue/inputtext";
-import ProgressBar from "primevue/progressbar";
 import { computed, ref } from "vue";
 
-import { statusCodeClass } from "../status";
+import { statusClass, statusCodeClass, statusLabel } from "../status";
 
 import { EmptyState } from "@/components/EmptyState";
 import { fullHeightCardPt } from "@/components/pt";
+import { TextShimmer } from "@/components/TextShimmer";
 import { type VirtualColumn, VirtualTable } from "@/components/VirtualTable";
 import { useScansStore } from "@/stores/scans";
 
@@ -24,10 +25,10 @@ type Row = {
 
 const columns: VirtualColumn<Row>[] = [
   { field: "id", label: "#", width: 70 },
-  { field: "templateId", label: "Template" },
+  { field: "templateId", label: "Template", width: 260 },
   { field: "statusCode", label: "Status", width: 90 },
   { field: "length", label: "Length", width: 90 },
-  { field: "roundtripTime", label: "Time", width: 90 },
+  { field: "roundtripTime", label: "Time" },
 ];
 
 const store = useScansStore();
@@ -56,12 +57,23 @@ const rows = computed<Row[]>(() => {
     );
 });
 
-const progress = computed(() => {
-  const scan = store.selectedScan;
-  return scan === undefined || scan.total === 0
-    ? 0
-    : Math.round((scan.sent / scan.total) * 100);
-});
+const menu = ref<InstanceType<typeof ContextMenu>>();
+const menuItems = [
+  {
+    label: "Send to Replay",
+    icon: "fas fa-paper-plane",
+    command: () => {
+      if (store.selectedResultId !== undefined) {
+        store.sendToReplay(store.selectedResultId);
+      }
+    },
+  },
+];
+
+const onContextMenu = (row: Row, event: MouseEvent) => {
+  store.selectedResultId = row.id;
+  menu.value?.show(event);
+};
 </script>
 
 <template>
@@ -73,7 +85,7 @@ const progress = computed(() => {
         message="Select a scan to see its results."
       />
       <template v-else>
-        <div class="flex items-center gap-3 p-3">
+        <div class="flex items-center gap-3 h-16 px-3 shrink-0">
           <div class="flex-1 min-w-0">
             <h3
               class="text-md font-semibold truncate"
@@ -81,9 +93,20 @@ const progress = computed(() => {
             >
               {{ store.selectedScan.url }}
             </h3>
-            <p class="text-xs text-surface-400">
-              {{ store.selectedScan.sent }} of {{ store.selectedScan.total }}
-              requests sent
+            <p class="text-xs">
+              <TextShimmer
+                v-if="store.selectedScan.status === 'Running'"
+                :text="`Scanning · ${store.selectedScan.sent} of ${store.selectedScan.total} requests sent`"
+              />
+              <template v-else>
+                <span :class="statusClass(store.selectedScan.status)">
+                  {{ statusLabel(store.selectedScan.status) }}
+                </span>
+                <span class="text-surface-400">
+                  · {{ store.selectedScan.sent }} of
+                  {{ store.selectedScan.total }} requests sent
+                </span>
+              </template>
             </p>
           </div>
           <IconField>
@@ -95,18 +118,13 @@ const progress = computed(() => {
             />
           </IconField>
         </div>
-        <ProgressBar
-          v-if="store.selectedScan.status === 'Running'"
-          :value="progress"
-          :show-value="false"
-          class="h-1 mx-3 mb-2"
-        />
         <VirtualTable
           :rows="rows"
           :columns="columns"
           :row-key="(row) => row.id"
           :selected-key="store.selectedResultId"
           @select="(row) => (store.selectedResultId = row.id)"
+          @contextmenu="onContextMenu"
         >
           <template #cell="{ row, field }">
             <span
@@ -130,6 +148,7 @@ const progress = computed(() => {
             />
           </template>
         </VirtualTable>
+        <ContextMenu ref="menu" :model="menuItems" />
       </template>
     </template>
   </Card>

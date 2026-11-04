@@ -3,7 +3,6 @@ import { ref, watch } from "vue";
 
 import { useSDK } from "@/plugins/sdk";
 import { useScansStore } from "@/stores/scans";
-import { getErrorMessage } from "@/utils/errors";
 
 export const useResultDetails = () => {
   const sdk = useSDK();
@@ -32,37 +31,5 @@ export const useResultDetails = () => {
     },
   );
 
-  const sendToReplay = async () => {
-    const scan = store.selectedScan;
-    const result = store.selectedResult;
-    if (scan === undefined || result === undefined) {
-      return;
-    }
-
-    try {
-      if (result.kind === "Ok") {
-        await sdk.replay.createSession({ type: "ID", id: result.requestId });
-      } else if (details.value?.request !== undefined) {
-        await sdk.replay.createSession({
-          type: "Raw",
-          raw: details.value.request,
-          connectionInfo: {
-            host: scan.host,
-            port: scan.port,
-            isTLS: scan.isTls,
-          },
-        });
-      }
-      sdk.window.showToast("Sent to Replay", { variant: "success" });
-    } catch (error) {
-      sdk.window.showToast(
-        `Failed to send to Replay: ${getErrorMessage(error)}`,
-        {
-          variant: "error",
-        },
-      );
-    }
-  };
-
-  return { details, error, sendToReplay };
+  return { details, error };
 };

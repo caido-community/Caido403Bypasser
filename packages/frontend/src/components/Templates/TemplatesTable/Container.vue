@@ -55,7 +55,7 @@ const onDelete = (template: Template) =>
 <template>
   <Card :pt="fullHeightCardPt">
     <template #content>
-      <div class="flex items-center gap-2 p-3">
+      <div class="flex items-center gap-2 h-16 px-3 shrink-0">
         <div class="flex-1 min-w-0">
           <h3 class="text-md font-semibold">Library</h3>
           <p class="text-xs text-surface-400">

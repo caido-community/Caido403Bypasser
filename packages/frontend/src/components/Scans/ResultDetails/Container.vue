@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Button from "primevue/button";
 import Card from "primevue/card";
 import Splitter from "primevue/splitter";
 import SplitterPanel from "primevue/splitterpanel";
@@ -13,12 +12,19 @@ import { fullHeightCardPt, splitterPanelPt, splitterPt } from "@/components/pt";
 import { useScansStore } from "@/stores/scans";
 
 const store = useScansStore();
-const { details, error, sendToReplay } = useResultDetails();
+const { details, error } = useResultDetails();
 
 const problem = computed(() => {
   const result = store.selectedResult;
   return result?.kind === "Error" ? result.error : error.value;
 });
+
+// Stopping propagation keeps Caido's global Mod+R from also sending its own active request.
+const onSendShortcut = () => {
+  if (store.selectedResultId !== undefined) {
+    store.sendToReplay(store.selectedResultId);
+  }
+};
 </script>
 
 <template>
@@ -30,36 +36,12 @@ const problem = computed(() => {
       />
     </template>
   </Card>
-  <div v-else class="h-full flex flex-col gap-1 min-h-0">
-    <Card
-      class="shrink-0"
-      :pt="{ body: { class: 'p-0' }, content: { class: 'p-0' } }"
-    >
-      <template #content>
-        <div class="flex items-center gap-3 px-3 py-2 min-w-0">
-          <i
-            v-if="problem !== undefined"
-            class="fas fa-exclamation-triangle text-red-400"
-          />
-          <span
-            class="flex-1 min-w-0 truncate text-sm"
-            :class="problem === undefined ? 'text-surface-300' : 'text-red-400'"
-            :title="problem"
-          >
-            {{ problem ?? store.selectedResult.templateId }}
-          </span>
-          <Button
-            label="Send to Replay"
-            icon="fas fa-paper-plane"
-            size="small"
-            severity="secondary"
-            outlined
-            :disabled="details?.request === undefined"
-            @click="sendToReplay"
-          />
-        </div>
-      </template>
-    </Card>
+  <div
+    v-else
+    class="h-full flex flex-col min-h-0"
+    @keydown.ctrl.r.exact.stop.prevent="onSendShortcut"
+    @keydown.meta.r.exact.stop.prevent="onSendShortcut"
+  >
     <Splitter :pt="splitterPt">
       <SplitterPanel :size="50" :min-size="20" :pt="splitterPanelPt">
         <Card :pt="fullHeightCardPt">
@@ -80,6 +62,11 @@ const problem = computed(() => {
               v-if="details?.response !== undefined"
               kind="response"
               :content="details.response"
+            />
+            <EmptyState
+              v-else-if="problem !== undefined"
+              icon="fas fa-exclamation-triangle"
+              :message="problem"
             />
             <EmptyState v-else icon="fas fa-ban" message="No response." />
           </template>

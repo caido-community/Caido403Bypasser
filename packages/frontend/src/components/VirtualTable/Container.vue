@@ -21,7 +21,10 @@ const {
   selectedKey?: string | number;
 }>();
 
-const emit = defineEmits<{ select: [row: Row] }>();
+const emit = defineEmits<{
+  select: [row: Row];
+  contextmenu: [row: Row, event: MouseEvent];
+}>();
 defineSlots<{
   cell?: (props: { row: Row; field: Field }) => unknown;
   empty?: () => unknown;
@@ -104,6 +107,7 @@ const columnStyle = (column: VirtualColumn<Row>) =>
             transform: `translateY(${item.start}px)`,
           }"
           @mousedown="emit('select', item.row)"
+          @contextmenu.prevent="emit('contextmenu', item.row, $event)"
         >
           <div
             v-for="column in columns"

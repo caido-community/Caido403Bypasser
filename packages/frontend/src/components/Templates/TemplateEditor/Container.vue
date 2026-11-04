@@ -22,15 +22,23 @@ const { draft, isNew, isDirty, isSaving, save, applyGenerated } =
     <SplitterPanel :size="55" :min-size="25" :pt="splitterPanelPt">
       <Card :pt="fullHeightCardPt">
         <template #content>
-          <div class="flex items-end gap-3 p-3">
-            <label class="flex flex-col gap-1 w-56">
-              <span class="text-xs text-surface-400">ID</span>
-              <InputText v-model="draft.id" size="small" class="font-mono" />
-            </label>
-            <label class="flex flex-col gap-1 flex-1 min-w-0">
-              <span class="text-xs text-surface-400">Description</span>
-              <InputText v-model="draft.description" size="small" />
-            </label>
+          <div class="flex items-center gap-3 h-16 px-3 shrink-0">
+            <InputText
+              v-model="draft.id"
+              v-tooltip.bottom="'Template ID'"
+              placeholder="template-id"
+              aria-label="Template ID"
+              size="small"
+              class="w-56 font-mono"
+            />
+            <InputText
+              v-model="draft.description"
+              v-tooltip.bottom="'Description'"
+              placeholder="Description"
+              aria-label="Description"
+              size="small"
+              class="flex-1 min-w-0"
+            />
             <AIGenerateDialog :draft="draft" @generated="applyGenerated" />
             <Button
               :label="isNew ? 'Create' : 'Save'"
