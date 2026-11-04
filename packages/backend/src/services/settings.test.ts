@@ -4,15 +4,22 @@ import path from "path";
 
 import { describe, expect, it } from "vitest";
 
+import type { BackendSDK } from "../types";
+
 import { SettingsService } from "./settings";
 
 const tempFile = async () =>
   path.join(await mkdtemp(path.join(tmpdir(), "bypasser-")), "settings.json");
 
+const createService = (file: string) =>
+  new SettingsService({
+    meta: { path: () => path.dirname(file) },
+  } as unknown as BackendSDK);
+
 describe("settings service", () => {
   it("uses defaults without a file and persists updates", async () => {
     const file = await tempFile();
-    const service = new SettingsService(file);
+    const service = createService(file);
     await service.load();
     expect(service.get()).toEqual({
       templatesDelay: 100,
@@ -29,13 +36,13 @@ describe("settings service", () => {
   it("loads saved settings and fills in missing keys", async () => {
     const file = await tempFile();
     await writeFile(file, JSON.stringify({ templatesDelay: 5, baseDir: "/x" }));
-    const service = new SettingsService(file);
+    const service = createService(file);
     await service.load();
     expect(service.get()).toEqual({ templatesDelay: 5, scanTimeout: 300_000 });
   });
 
   it("rejects out of range values", async () => {
-    const service = new SettingsService(await tempFile());
+    const service = createService(await tempFile());
     expect(
       (await service.update({ templatesDelay: -1, scanTimeout: 1_000 })).kind,
     ).toBe("Error");

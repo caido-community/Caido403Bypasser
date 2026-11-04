@@ -1,7 +1,6 @@
 import { err, ok, type Result, scanSourceSchema } from "shared";
 import { z } from "zod";
 
-import type { HttpService } from "../services/http";
 import type { ScansService } from "../services/scans";
 import type { SettingsService } from "../services/settings";
 import type { TemplatesService } from "../services/templates";
@@ -12,7 +11,6 @@ type Services = {
   templates: TemplatesService;
   settings: SettingsService;
   scans: ScansService;
-  http: HttpService;
 };
 
 const guard = async <T>(fn: () => Promise<Result<T>>): Promise<Result<T>> => {
@@ -25,7 +23,7 @@ const guard = async <T>(fn: () => Promise<Result<T>>): Promise<Result<T>> => {
 
 export const registerApi = (
   sdk: BackendSDK,
-  { templates, settings, scans, http }: Services,
+  { templates, settings, scans }: Services,
 ) => {
   sdk.api.register("getTemplates", () => ok(templates.list()));
   sdk.api.register("saveTemplate", (_, previousId, template) =>
@@ -53,14 +51,9 @@ export const registerApi = (
       if (!source.success) {
         return err(z.prettifyError(source.error));
       }
-      if (source.data.kind === "Raw") {
-        return ok(scans.start(source.data.target));
-      }
-
-      const target = await http.loadTarget(source.data.requestId);
-      return target === undefined
-        ? err(`Request ${source.data.requestId} not found`)
-        : ok(scans.start(target));
+      return source.data.kind === "Raw"
+        ? ok(scans.start(source.data.target))
+        : scans.startFromRequest(source.data.requestId);
     }),
   );
   sdk.api.register("rerunScan", (_, id) => scans.rerun(id));

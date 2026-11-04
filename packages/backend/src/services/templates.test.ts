@@ -6,6 +6,7 @@ import type { Template } from "shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultTemplates } from "../defaultTemplates";
+import type { BackendSDK } from "../types";
 
 import { TemplatesService } from "./templates";
 
@@ -29,8 +30,12 @@ describe("templates service", () => {
   const setup = () => {
     const onChange = vi.fn();
     const onLoadError = vi.fn();
-    const service = new TemplatesService({ dir, onChange, onLoadError });
-    return { service, onChange, onLoadError };
+    const sdk = {
+      meta: { path: () => path.dirname(dir) },
+      api: { send: (_: string, list: Template[]) => onChange(list) },
+      console: { error: onLoadError },
+    } as unknown as BackendSDK;
+    return { service: new TemplatesService(sdk), onChange, onLoadError };
   };
 
   it("seeds the default templates on first run only", async () => {
@@ -76,8 +81,8 @@ describe("templates service", () => {
 
     await service.save("custom", { ...custom, id: "renamed" });
     expect(await readdir(dir)).toEqual(["renamed.yaml"]);
-    expect(await readFile(path.join(dir, "renamed.yaml"), "utf-8")).toContain(
-      "id: renamed",
+    expect(await readFile(path.join(dir, "renamed.yaml"), "utf-8")).toBe(
+      "id: renamed\ndescription: Custom\nenabled: true\nmodificationScript: return input;\n",
     );
 
     await service.remove("renamed");
@@ -107,7 +112,9 @@ describe("templates service", () => {
 
     const exported = service.exportYaml("custom");
     await service.clear();
-    expect(exported.kind).toBe("Ok");
+    expect(exported.kind === "Ok" && exported.value).toContain(
+      "modificationScript: |-\n  const a = 1;\n  return input;",
+    );
     const imported = await service.importYaml(
       exported.kind === "Ok" ? exported.value : "",
     );

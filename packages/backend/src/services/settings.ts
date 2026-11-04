@@ -4,6 +4,8 @@ import path from "path";
 import { err, ok, type Result, type Settings, settingsSchema } from "shared";
 import { z } from "zod";
 
+import type { BackendSDK } from "../types";
+
 const defaultSettings: Settings = {
   templatesDelay: 100,
   scanTimeout: 5 * 60 * 1000,
@@ -11,8 +13,11 @@ const defaultSettings: Settings = {
 
 export class SettingsService {
   private settings = defaultSettings;
+  private readonly file: string;
 
-  constructor(private readonly file: string) {}
+  constructor(sdk: BackendSDK) {
+    this.file = path.join(sdk.meta.path(), "settings.json");
+  }
 
   get() {
     return this.settings;

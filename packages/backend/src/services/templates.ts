@@ -1,22 +1,22 @@
 import { mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
 import path from "path";
 
+import { dump, load } from "js-yaml";
 import { err, ok, type Result, type Template, templateSchema } from "shared";
-import YAML from "yaml";
 import { z } from "zod";
 
 import { defaultTemplates } from "../defaultTemplates";
+import type { BackendSDK } from "../types";
 
-type Options = {
-  dir: string;
-  onChange: (templates: Template[]) => void;
-  onLoadError: (message: string) => void;
-};
+const toYaml = (template: Template) => dump(template, { lineWidth: -1 });
 
 export class TemplatesService {
   private readonly templates = new Map<string, Template>();
+  private readonly dir: string;
 
-  constructor(private readonly options: Options) {}
+  constructor(private readonly sdk: BackendSDK) {
+    this.dir = path.join(sdk.meta.path(), "templates");
+  }
 
   list() {
     return [...this.templates.values()].sort((a, b) =>
@@ -25,7 +25,7 @@ export class TemplatesService {
   }
 
   async load() {
-    const { dir, onLoadError } = this.options;
+    const { dir } = this;
     // Caido's fs has no existsSync and its errors carry no `code`, so check presence via readdir.
     const isFirstRun = !(await readdir(path.dirname(dir))).includes(
       path.basename(dir),
@@ -44,19 +44,23 @@ export class TemplatesService {
 
       try {
         const parsed = templateSchema.safeParse(
-          YAML.parse(await readFile(path.join(dir, file), "utf-8")),
+          load(await readFile(path.join(dir, file), "utf-8")),
         );
         if (!parsed.success) {
-          onLoadError(
+          this.sdk.console.error(
             `Invalid template ${file}: ${z.prettifyError(parsed.error)}`,
           );
         } else if (`${parsed.data.id}.yaml` !== file) {
-          onLoadError(`Template ${file} must be named ${parsed.data.id}.yaml`);
+          this.sdk.console.error(
+            `Template ${file} must be named ${parsed.data.id}.yaml`,
+          );
         } else {
           this.templates.set(parsed.data.id, parsed.data);
         }
       } catch (error) {
-        onLoadError(`Failed to load template ${file}: ${String(error)}`);
+        this.sdk.console.error(
+          `Failed to load template ${file}: ${String(error)}`,
+        );
       }
     }
     this.changed();
@@ -102,7 +106,7 @@ export class TemplatesService {
   async importYaml(yaml: string): Promise<Result<Template>> {
     let data: unknown;
     try {
-      data = YAML.parse(yaml);
+      data = load(yaml);
     } catch (error) {
       return err(`Invalid YAML: ${String(error)}`);
     }
@@ -113,7 +117,7 @@ export class TemplatesService {
     const template = this.templates.get(id);
     return template === undefined
       ? err(`Template ${id} not found`)
-      : ok(YAML.stringify(template));
+      : ok(toYaml(template));
   }
 
   async reset() {
@@ -128,15 +132,15 @@ export class TemplatesService {
   }
 
   private fileOf(id: string) {
-    return path.join(this.options.dir, `${id}.yaml`);
+    return path.join(this.dir, `${id}.yaml`);
   }
 
   private changed() {
-    this.options.onChange(this.list());
+    this.sdk.api.send("templates:changed", this.list());
   }
 
   private async write(template: Template) {
-    await writeFile(this.fileOf(template.id), YAML.stringify(template));
+    await writeFile(this.fileOf(template.id), toYaml(template));
     this.templates.set(template.id, template);
   }
 

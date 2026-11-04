@@ -1,3 +1,4 @@
+import { RequestSpecRaw } from "caido:utils";
 import {
   err,
   ok,
@@ -8,30 +9,14 @@ import {
   type ScanResult,
   type ScanStatus,
   type ScanTarget,
-  type Settings,
-  type Template,
 } from "shared";
 
-import type { Emit } from "../types";
+import type { BackendSDK } from "../types";
+import { encodeRaw, toBinaryString } from "../utils/bytes";
 import { getErrorMessage } from "../utils/errors";
 
-export type SentRequest = {
-  requestId: string;
-  statusCode: number;
-  length: number;
-  roundtripTime: number;
-};
-
-type Options = {
-  getTemplates: () => Template[];
-  getSettings: () => Settings;
-  send: (target: ScanTarget, raw: string) => Promise<SentRequest>;
-  loadDetails: (requestId: string) => Promise<ResultDetails | undefined>;
-  emit: Emit;
-  onError: (message: string) => void;
-  sleep?: (ms: number) => Promise<void>;
-  now?: () => number;
-};
+import type { SettingsService } from "./settings";
+import type { TemplatesService } from "./templates";
 
 type Entry = {
   scan: Scan;
@@ -46,19 +31,18 @@ const toUrl = ({ host, port, isTls, raw }: ScanTarget) => {
   return `${isTls ? "https" : "http"}://${host}${isDefaultPort ? "" : `:${port}`}${path}`;
 };
 
-const defaultSleep = (ms: number) =>
+const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export class ScansService {
   private readonly entries = new Map<number, Entry>();
   private lastId = 0;
-  private readonly sleep: (ms: number) => Promise<void>;
-  private readonly now: () => number;
 
-  constructor(private readonly options: Options) {
-    this.sleep = options.sleep ?? defaultSleep;
-    this.now = options.now ?? Date.now;
-  }
+  constructor(
+    private readonly sdk: BackendSDK,
+    private readonly templates: TemplatesService,
+    private readonly settings: SettingsService,
+  ) {}
 
   list() {
     return [...this.entries.values()].map((entry) => entry.scan);
@@ -74,7 +58,7 @@ export class ScansService {
         port: target.port,
         isTls: target.isTls,
         status: "Running",
-        startedAt: this.now(),
+        startedAt: Date.now(),
         finishedAt: undefined,
         sent: 0,
         total: 0,
@@ -84,10 +68,10 @@ export class ScansService {
       failedRequests: new Map(),
     };
     this.entries.set(entry.scan.id, entry);
-    this.options.emit("scan:updated", entry.scan);
+    this.sdk.api.send("scan:updated", entry.scan);
 
     this.run(entry).catch((error: unknown) => {
-      this.options.onError(
+      this.sdk.console.error(
         `Scan ${entry.scan.id} failed: ${getErrorMessage(error)}`,
       );
       if (this.isActive(entry)) {
@@ -113,14 +97,14 @@ export class ScansService {
   remove(id: number) {
     return this.withEntry(id, () => {
       this.entries.delete(id);
-      this.options.emit("scan:deleted", id);
+      this.sdk.api.send("scan:deleted", id);
       return ok(undefined);
     });
   }
 
   clear() {
     this.entries.clear();
-    this.options.emit("scans:cleared");
+    this.sdk.api.send("scans:cleared");
   }
 
   getResults(id: number) {
@@ -144,34 +128,69 @@ export class ScansService {
       });
     }
 
-    const details = await this.options.loadDetails(result.requestId);
-    return details === undefined
+    const saved = await this.sdk.requests.get(result.requestId);
+    return saved === undefined
       ? err(`Request ${result.requestId} no longer exists`)
-      : ok(details);
+      : ok({
+          request: saved.request.getRaw().toText(),
+          response: saved.response?.getRaw().toText(),
+        });
+  }
+
+  async startFromRequest(requestId: string): Promise<Result<Scan>> {
+    const saved = await this.sdk.requests.get(requestId);
+    if (saved === undefined) {
+      return err(`Request ${requestId} not found`);
+    }
+    const { request } = saved;
+    return ok(
+      this.start({
+        host: request.getHost(),
+        port: request.getPort(),
+        isTls: request.getTls(),
+        raw: toBinaryString(request.getRaw().toBytes()),
+      }),
+    );
+  }
+
+  private async send(target: ScanTarget, raw: string) {
+    const spec = new RequestSpecRaw("http://localhost");
+    spec.setHost(target.host);
+    spec.setTls(target.isTls);
+    spec.setPort(target.port);
+    spec.setRaw(encodeRaw(raw));
+
+    const { request, response } = await this.sdk.requests.send(spec);
+    return {
+      requestId: request.getId(),
+      statusCode: response.getCode(),
+      length: response.getRaw().toBytes().length,
+      roundtripTime: response.getRoundtripTime(),
+    };
   }
 
   private async run(entry: Entry) {
-    const { templatesDelay, scanTimeout } = this.options.getSettings();
+    const { templatesDelay, scanTimeout } = this.settings.get();
     const deadline = entry.scan.startedAt + scanTimeout;
     const requests = this.plan(entry);
     entry.scan.total = requests.length;
-    this.options.emit("scan:updated", entry.scan);
+    this.sdk.api.send("scan:updated", entry.scan);
 
     for (const [index, { templateId, raw }] of requests.entries()) {
       if (index > 0 && templatesDelay > 0) {
-        await this.sleep(templatesDelay);
+        await sleep(templatesDelay);
       }
       if (!this.isActive(entry)) {
         return;
       }
-      if (this.now() >= deadline) {
+      if (Date.now() >= deadline) {
         this.finish(entry, "TimedOut");
         return;
       }
 
       const id = entry.results.length + 1;
       try {
-        const sent = await this.options.send(entry.target, raw);
+        const sent = await this.send(entry.target, raw);
         this.addResult(entry, { kind: "Ok", id, templateId, ...sent });
       } catch (error) {
         entry.failedRequests.set(id, raw);
@@ -183,7 +202,7 @@ export class ScansService {
         });
       }
       entry.scan.sent += 1;
-      this.options.emit("scan:updated", entry.scan);
+      this.sdk.api.send("scan:updated", entry.scan);
     }
 
     if (this.isActive(entry)) {
@@ -193,7 +212,7 @@ export class ScansService {
 
   private plan(entry: Entry) {
     const requests: { templateId: string; raw: string }[] = [];
-    for (const template of this.options.getTemplates()) {
+    for (const template of this.templates.list()) {
       if (!template.enabled) {
         continue;
       }
@@ -224,13 +243,13 @@ export class ScansService {
 
   private finish(entry: Entry, status: ScanStatus) {
     entry.scan.status = status;
-    entry.scan.finishedAt = this.now();
-    this.options.emit("scan:updated", entry.scan);
+    entry.scan.finishedAt = Date.now();
+    this.sdk.api.send("scan:updated", entry.scan);
   }
 
   private addResult(entry: Entry, result: ScanResult) {
     entry.results.push(result);
-    this.options.emit("result:created", entry.scan.id, result);
+    this.sdk.api.send("result:created", entry.scan.id, result);
   }
 
   private withEntry<T>(id: number, fn: (entry: Entry) => Result<T>) {

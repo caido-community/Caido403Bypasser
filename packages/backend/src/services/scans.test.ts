@@ -1,7 +1,20 @@
 import type { Settings, Template } from "shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ScansService, type SentRequest } from "./scans";
+import type { BackendSDK } from "../types";
+
+import { ScansService } from "./scans";
+import type { SettingsService } from "./settings";
+import type { TemplatesService } from "./templates";
+
+vi.mock("caido:utils", () => ({
+  RequestSpecRaw: class {
+    setHost() {}
+    setTls() {}
+    setPort() {}
+    setRaw() {}
+  },
+}));
 
 const target = {
   host: "example.com",
@@ -17,39 +30,50 @@ const template = (id: string, script: string, enabled = true): Template => ({
   modificationScript: script,
 });
 
+const sent = (statusCode = 200) => ({
+  request: { getId: () => "1" },
+  response: {
+    getCode: () => statusCode,
+    getRaw: () => ({ toBytes: () => new Uint8Array(10) }),
+    getRoundtripTime: () => 5,
+  },
+});
+
 const setup = ({
   templates = [template("two", "return [input, input];")],
   settings = { templatesDelay: 0, scanTimeout: 60_000 },
-  send = vi.fn((): Promise<SentRequest> =>
-    Promise.resolve({
-      requestId: "1",
-      statusCode: 200,
-      length: 10,
-      roundtripTime: 5,
-    }),
-  ),
-  now = () => 0,
+  send = vi.fn(() => Promise.resolve(sent())),
 }: {
   templates?: Template[];
   settings?: Settings;
-  send?: () => Promise<SentRequest>;
-  now?: () => number;
+  send?: () => Promise<unknown>;
 } = {}) => {
   const emit = vi.fn();
-  const service = new ScansService({
-    getTemplates: () => templates,
-    getSettings: () => settings,
-    send,
-    loadDetails: () => Promise.resolve({ request: "req", response: "resp" }),
-    emit,
-    onError: vi.fn(),
-    sleep: () => Promise.resolve(),
-    now,
-  });
+  const sdk = {
+    api: { send: emit },
+    console: { error: vi.fn() },
+    requests: {
+      send,
+      get: () =>
+        Promise.resolve({
+          request: { getRaw: () => ({ toText: () => "req" }) },
+          response: { getRaw: () => ({ toText: () => "resp" }) },
+        }),
+    },
+  } as unknown as BackendSDK;
+  const service = new ScansService(
+    sdk,
+    { list: () => templates } as TemplatesService,
+    { get: () => settings } as SettingsService,
+  );
   return { service, emit, send };
 };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("scans service", () => {
   it("sends every request of every enabled template", async () => {
@@ -118,20 +142,14 @@ describe("scans service", () => {
   });
 
   it("stops when the timeout is reached", async () => {
-    let time = 0;
+    vi.useFakeTimers({ toFake: ["Date"] });
     const { service } = setup({
       templates: [template("many", "return [input, input, input];")],
       settings: { templatesDelay: 0, scanTimeout: 1_000 },
       send: () => {
-        time += 600;
-        return Promise.resolve({
-          requestId: "1",
-          statusCode: 403,
-          length: 0,
-          roundtripTime: 600,
-        });
+        vi.setSystemTime(Date.now() + 600);
+        return Promise.resolve(sent(403));
       },
-      now: () => time,
     });
 
     const scan = service.start(target);
