@@ -71,7 +71,7 @@ export default defineConfig({
                 },
                 content: [
                   './packages/frontend/src/**/*.{vue,ts}',
-                  './node_modules/@caido/primevue/dist/primevue.mjs'
+                  './packages/frontend/node_modules/@caido/primevue/dist/primevue.mjs'
                 ],
                 darkMode: ["selector", '[data-mode="dark"]'],
                 plugins: [
