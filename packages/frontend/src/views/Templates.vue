@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from "primevue/button";
 import Card from "primevue/card";
 import Splitter from "primevue/splitter";
 import SplitterPanel from "primevue/splitterpanel";
@@ -32,7 +33,28 @@ const editorKey = computed(() => {
         <TemplateActions />
       </template>
     </PageHeader>
-    <Splitter :pt="splitterPt">
+    <Card
+      v-if="store.templates.length === 0 && store.selection.kind === 'None'"
+      class="flex-1 min-h-0"
+      :pt="fullHeightCardPt"
+    >
+      <template #content>
+        <EmptyState
+          icon="fas fa-file-code"
+          message="No templates yet. Create one, import some, or restore the defaults."
+        >
+          <Button
+            label="Restore defaults"
+            icon="fas fa-undo"
+            size="small"
+            severity="secondary"
+            outlined
+            @click="store.reset()"
+          />
+        </EmptyState>
+      </template>
+    </Card>
+    <Splitter v-else :pt="splitterPt">
       <SplitterPanel :size="35" :min-size="20" :pt="splitterPanelPt">
         <TemplatesTable />
       </SplitterPanel>
