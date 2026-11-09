@@ -30,6 +30,22 @@ describe("getScanSources", () => {
     ]);
   });
 
+  it("keeps bare LFs of a wire-format request", () => {
+    const raw =
+      'POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 10\r\n\r\n{\n"a": 1\n}';
+    const context = {
+      type: "RequestContext",
+      request: { host: "example.com", port: 443, isTls: true, raw },
+    } as CommandContext;
+
+    expect(getScanSources(context, noPage)).toEqual([
+      {
+        kind: "Raw",
+        target: { host: "example.com", port: 443, isTls: true, raw },
+      },
+    ]);
+  });
+
   it("scans at most 25 selected rows", () => {
     const context = {
       type: "RequestRowContext",
