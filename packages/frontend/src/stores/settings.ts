@@ -7,7 +7,7 @@ import { showResult } from "@/utils/result";
 
 export const useSettingsStore = defineStore("settings", () => {
   const sdk = useSDK();
-  const settings = ref<Settings | undefined>(undefined);
+  const settings = ref<Settings>();
 
   const initialize = async () => {
     const result = await sdk.backend.getSettings();

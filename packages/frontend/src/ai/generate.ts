@@ -39,7 +39,7 @@ return suffixes.map((suffix) => helper.setPath(input, (path) => path + suffix));
 export const validateGenerated = (
   generated: GeneratedTemplate,
   testRequest: string,
-): string | undefined => {
+) => {
   const parsed = templateSchema.safeParse({ ...generated, enabled: true });
   if (!parsed.success) {
     return z.prettifyError(parsed.error);
@@ -69,7 +69,7 @@ export const generateTemplate = async ({
   draft,
   testRequest,
   abortSignal,
-}: Options): Promise<GeneratedTemplate> => {
+}: Options) => {
   const messages: ModelMessage[] = [
     {
       role: "user",

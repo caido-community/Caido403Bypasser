@@ -4,10 +4,14 @@ import { type FrontendSDK } from "@/types";
 
 const KEY: InjectionKey<FrontendSDK> = Symbol("FrontendSDK");
 
-export const SDKPlugin: Plugin = (app, sdk: FrontendSDK) => {
+export const SDKPlugin: Plugin<FrontendSDK> = (app, sdk) => {
   app.provide(KEY, sdk);
 };
 
 export const useSDK = () => {
-  return inject(KEY) as FrontendSDK;
+  const sdk = inject(KEY);
+  if (sdk === undefined) {
+    throw new Error("SDKPlugin is not installed");
+  }
+  return sdk;
 };

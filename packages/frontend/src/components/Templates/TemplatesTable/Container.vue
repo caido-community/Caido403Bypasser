@@ -32,7 +32,7 @@ const enabledCount = computed(
 
 const selection = computed({
   get: () => store.selected,
-  set: (template: Template | undefined) => {
+  set: (template) => {
     store.selection =
       template === undefined
         ? { kind: "None" }

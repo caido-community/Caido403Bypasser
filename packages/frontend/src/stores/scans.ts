@@ -13,9 +13,9 @@ import { showResult } from "@/utils/result";
 export const useScansStore = defineStore("scans", () => {
   const sdk = useSDK();
   const scans = ref<Scan[]>([]);
-  const selectedScanId = ref<number | undefined>(undefined);
+  const selectedScanId = ref<number>();
   const results = ref<ScanResult[]>([]);
-  const selectedResultId = ref<number | undefined>(undefined);
+  const selectedResultId = ref<number>();
 
   const sortedScans = computed(() =>
     [...scans.value].sort((a, b) => b.id - a.id),

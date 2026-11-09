@@ -1,5 +1,3 @@
-import { type Template } from "shared";
-
 import { add8kbBodyTemplate } from "./add-8kb-body";
 import { httpFirstLineCasesTemplate } from "./http-first-line-cases";
 import { httpHeaderPathTemplate } from "./http-header-path";
@@ -22,7 +20,7 @@ import { trimInconsistenciesTemplate } from "./trim-inconsistencies";
 import { unicodeBypassAddEfbc8fTemplate } from "./unicode-bypass-add-efbc8f";
 import { userAgentTemplate } from "./user-agent";
 
-export const defaultTemplates: Template[] = [
+export const defaultTemplates = [
   add8kbBodyTemplate,
   httpFirstLineCasesTemplate,
   httpHeaderPathTemplate,

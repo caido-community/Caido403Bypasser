@@ -1,4 +1,3 @@
-import type { AIUpstreamModel } from "@caido/sdk-frontend";
 import { useStorage } from "@vueuse/core";
 import { getErrorMessage, type Template } from "shared";
 import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
@@ -12,7 +11,7 @@ export const useAIGenerate = (draft: () => Template) => {
   const sdk = useSDK();
   const store = useTemplatesStore();
 
-  const models = ref<AIUpstreamModel[]>(sdk.ai.getUpstreamModels());
+  const models = ref(sdk.ai.getUpstreamModels());
   const listener = sdk.ai.onUpstreamModelsChange((updated) => {
     models.value = updated;
   });

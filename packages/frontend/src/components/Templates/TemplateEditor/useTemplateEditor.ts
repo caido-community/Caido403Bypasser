@@ -1,4 +1,3 @@
-import type { Template } from "shared";
 import { computed, ref } from "vue";
 
 import type { GeneratedTemplate } from "@/ai/generate";
@@ -8,7 +7,7 @@ import { useTemplatesStore } from "@/stores/templates";
 export const useTemplateEditor = () => {
   const store = useTemplatesStore();
   const isNew = store.selected === undefined;
-  const draft = ref<Template>({ ...(store.selected ?? createDraftTemplate()) });
+  const draft = ref({ ...(store.selected ?? createDraftTemplate()) });
 
   const isDirty = computed(() => {
     const saved = store.selected;

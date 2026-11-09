@@ -9,8 +9,11 @@ const store = useTemplatesStore();
 const requireConfirm = useDangerConfirm();
 
 const importInput = ref<HTMLInputElement>();
-const onImport = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
+const onImport = async () => {
+  const input = importInput.value;
+  if (input === undefined) {
+    return;
+  }
   await store.importFiles(Array.from(input.files ?? []));
   input.value = "";
 };

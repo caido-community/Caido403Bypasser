@@ -48,7 +48,7 @@ export class ScansService {
     return [...this.entries.values()].map((entry) => entry.scan);
   }
 
-  start(target: ScanTarget): Scan {
+  start(target: ScanTarget) {
     this.lastId += 1;
     const entry: Entry = {
       scan: {
@@ -215,27 +215,22 @@ export class ScansService {
   }
 
   private plan(entry: Entry) {
-    const requests: { templateId: string; raw: string }[] = [];
-    for (const template of this.templates.list()) {
-      if (!template.enabled) {
-        continue;
-      }
-
-      const output = runScript(entry.target.raw, template.modificationScript);
-      if (output.kind === "Error") {
-        this.addResult(entry, {
-          kind: "Error",
-          id: entry.results.length + 1,
-          templateId: template.id,
-          error: `Script failed: ${output.error}`,
-        });
-        continue;
-      }
-      requests.push(
-        ...output.value.map((raw) => ({ templateId: template.id, raw })),
-      );
-    }
-    return requests;
+    return this.templates
+      .list()
+      .filter((template) => template.enabled)
+      .flatMap((template) => {
+        const output = runScript(entry.target.raw, template.modificationScript);
+        if (output.kind === "Error") {
+          this.addResult(entry, {
+            kind: "Error",
+            id: entry.results.length + 1,
+            templateId: template.id,
+            error: `Script failed: ${output.error}`,
+          });
+          return [];
+        }
+        return output.value.map((raw) => ({ templateId: template.id, raw }));
+      });
   }
 
   private isActive(entry: Entry) {
