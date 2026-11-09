@@ -30,6 +30,14 @@ export const useTemplatesStore = defineStore("templates", () => {
     }
   };
 
+  // The RPC response can arrive before its `templates:changed` event.
+  const select = (template: Template) => {
+    if (!templates.value.some((t) => t.id === template.id)) {
+      templates.value = [...templates.value, template];
+    }
+    selection.value = { kind: "Existing", id: template.id };
+  };
+
   const initialize = async () => {
     sdk.backend.onEvent("templates:changed", setTemplates);
     const result = await sdk.backend.getTemplates();
@@ -41,7 +49,7 @@ export const useTemplatesStore = defineStore("templates", () => {
   const save = async (previousId: string | undefined, template: Template) => {
     const result = await sdk.backend.saveTemplate(previousId, template);
     if (showResult(sdk, result, `Saved ${template.id}`)) {
-      selection.value = { kind: "Existing", id: result.value.id };
+      select(result.value);
     }
   };
 
@@ -63,7 +71,7 @@ export const useTemplatesStore = defineStore("templates", () => {
     for (const file of files) {
       const result = await sdk.backend.importTemplate(await file.text());
       if (showResult(sdk, result, `Imported ${file.name}`)) {
-        selection.value = { kind: "Existing", id: result.value.id };
+        select(result.value);
       }
     }
   };
