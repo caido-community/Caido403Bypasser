@@ -17,10 +17,7 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const update = async (input: Settings) => {
-    const result = await sdk.backend.updateSettings(input);
-    if (showResult(sdk, result)) {
-      settings.value = result.value;
-    }
+    showResult(sdk, await sdk.backend.updateSettings(input));
   };
 
   return { settings, initialize, update };
