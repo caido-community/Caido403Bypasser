@@ -78,7 +78,11 @@ const onDelete = (template: Template) =>
         <template #empty>
           <EmptyState
             icon="fas fa-file-code"
-            message="No templates. Create one or restore the defaults."
+            :message="
+              store.templates.length === 0
+                ? 'No templates. Create one or restore the defaults.'
+                : 'No templates match the filter.'
+            "
           />
         </template>
         <Column class="w-16">

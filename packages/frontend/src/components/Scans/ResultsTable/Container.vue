@@ -135,7 +135,11 @@ const onContextMenu = (row: Row, event: MouseEvent) => {
           <template #empty>
             <EmptyState
               icon="fas fa-hourglass-half"
-              message="No results yet."
+              :message="
+                store.results.length === 0
+                  ? 'No results yet.'
+                  : 'No results match the filter.'
+              "
             />
           </template>
         </VirtualTable>

@@ -113,7 +113,11 @@ const formatTime = (timestamp: number) =>
         <template #empty>
           <EmptyState
             icon="fas fa-unlock"
-            message="Right-click a request and choose “403Bypasser: Scan” to start."
+            :message="
+              store.sortedScans.length === 0
+                ? 'Right-click a request and choose “403Bypasser: Scan” to start.'
+                : 'No scans match the filter.'
+            "
           />
         </template>
       </VirtualTable>
