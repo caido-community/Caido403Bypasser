@@ -9,7 +9,7 @@ import { exists } from "../utils/fs";
 
 const defaultSettings: Settings = {
   templatesDelay: 100,
-  scanTimeout: 5 * 60 * 1000,
+  scanTimeout: 30 * 60 * 1000,
 };
 
 export class SettingsService {

@@ -23,7 +23,7 @@ describe("settings service", () => {
     await service.load();
     expect(service.get()).toEqual({
       templatesDelay: 100,
-      scanTimeout: 300_000,
+      scanTimeout: 1_800_000,
     });
 
     await service.update({ templatesDelay: 0, scanTimeout: 1_000 });
@@ -38,7 +38,10 @@ describe("settings service", () => {
     await writeFile(file, JSON.stringify({ templatesDelay: 5, baseDir: "/x" }));
     const service = createService(file);
     await service.load();
-    expect(service.get()).toEqual({ templatesDelay: 5, scanTimeout: 300_000 });
+    expect(service.get()).toEqual({
+      templatesDelay: 5,
+      scanTimeout: 1_800_000,
+    });
   });
 
   it("rejects out of range values", async () => {
