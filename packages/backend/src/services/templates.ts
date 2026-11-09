@@ -90,13 +90,16 @@ export class TemplatesService {
     }
 
     const isRename = previousId !== undefined && previousId !== template.id;
-    // On case-insensitive filesystems a case-only rename targets the same file, so drop the old name first.
-    if (isRename && sameFileName(previousId, template.id)) {
+    // A case-only rename is the same file on case-insensitive filesystems.
+    const isSameFile = isRename && sameFileName(previousId, template.id);
+    if (isSameFile) {
       await this.removeFile(previousId);
     }
     await this.write(template);
     if (isRename) {
-      await this.removeFile(previousId);
+      if (!isSameFile) {
+        await this.removeFile(previousId);
+      }
       this.templates.delete(previousId);
     }
     this.changed();

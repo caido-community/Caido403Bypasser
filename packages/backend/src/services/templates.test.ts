@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from "fs/promises";
+import type * as FsPromises from "fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 
@@ -9,6 +10,11 @@ import { defaultTemplates } from "../defaultTemplates";
 import type { BackendSDK } from "../types";
 
 import { TemplatesService } from "./templates";
+
+vi.mock("fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, rm: vi.fn(actual.rm) };
+});
 
 const custom: Template = {
   id: "custom",
@@ -99,7 +105,9 @@ describe("templates service", () => {
     expect(
       (await service.save(undefined, { ...custom, id: "CUSTOM" })).kind,
     ).toBe("Error");
+    vi.mocked(rm).mockClear();
     await service.save("custom", { ...custom, id: "Custom" });
+    expect(rm).toHaveBeenCalledTimes(1);
     expect(await readdir(dir)).toEqual(["Custom.yaml"]);
     expect(service.list().map((t) => t.id)).toEqual(["Custom"]);
   });
