@@ -1,7 +1,7 @@
 import type { AIUpstreamModel } from "@caido/sdk-frontend";
 import { useStorage } from "@vueuse/core";
 import { getErrorMessage, type Template } from "shared";
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref, shallowRef } from "vue";
 
 import { generateTemplate } from "@/ai/generate";
 import { useSDK } from "@/plugins/sdk";
@@ -38,10 +38,10 @@ export const useAIGenerate = (draft: () => Template) => {
   });
 
   const prompt = ref("");
-  let controller: AbortController | undefined;
-  const isGenerating = ref(false);
+  const controller = shallowRef<AbortController>();
+  const isGenerating = computed(() => controller.value !== undefined);
 
-  const cancel = () => controller?.abort();
+  const cancel = () => controller.value?.abort();
 
   const generate = async () => {
     const modelId = selectedModelId.value;
@@ -53,20 +53,20 @@ export const useAIGenerate = (draft: () => Template) => {
       return undefined;
     }
 
-    controller = new AbortController();
-    isGenerating.value = true;
+    const current = new AbortController();
+    controller.value = current;
     try {
       const template = await generateTemplate({
         model: sdk.ai.createProvider()(modelId),
         prompt: prompt.value,
         draft: draft(),
         testRequest: toCrlf(store.testRequest),
-        abortSignal: controller.signal,
+        abortSignal: current.signal,
       });
       sdk.window.showToast("Template generated", { variant: "success" });
       return template;
     } catch (error) {
-      if (!controller.signal.aborted) {
+      if (!current.signal.aborted) {
         sdk.window.showToast(
           `AI generation failed: ${getErrorMessage(error)}`,
           {
@@ -76,7 +76,7 @@ export const useAIGenerate = (draft: () => Template) => {
       }
       return undefined;
     } finally {
-      isGenerating.value = false;
+      controller.value = undefined;
     }
   };
 

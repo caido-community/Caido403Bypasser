@@ -83,8 +83,7 @@ Request: ${prompt}`,
     },
   ];
 
-  let problem = "";
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     const { output } = await generateText({
       model,
       system: systemPrompt,
@@ -93,9 +92,14 @@ Request: ${prompt}`,
       abortSignal,
     });
 
-    problem = validateGenerated(output, testRequest) ?? "";
-    if (problem === "") {
+    const problem = validateGenerated(output, testRequest);
+    if (problem === undefined) {
       return output;
+    }
+    if (attempt === MAX_ATTEMPTS) {
+      throw new Error(
+        `The model did not produce a working template after ${MAX_ATTEMPTS} attempts: ${problem}`,
+      );
     }
 
     messages.push(
@@ -106,8 +110,4 @@ Request: ${prompt}`,
       },
     );
   }
-
-  throw new Error(
-    `The model did not produce a working template after ${MAX_ATTEMPTS} attempts: ${problem}`,
-  );
 };

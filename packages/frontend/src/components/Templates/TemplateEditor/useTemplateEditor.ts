@@ -24,11 +24,14 @@ export const useTemplateEditor = () => {
   const save = async () => {
     const saved = store.selected;
     isSaving.value = true;
-    await store.save(saved?.id, {
-      ...draft.value,
-      enabled: saved?.enabled ?? true,
-    });
-    isSaving.value = false;
+    try {
+      await store.save(saved?.id, {
+        ...draft.value,
+        enabled: saved?.enabled ?? true,
+      });
+    } finally {
+      isSaving.value = false;
+    }
   };
 
   const applyGenerated = (generated: GeneratedTemplate) => {

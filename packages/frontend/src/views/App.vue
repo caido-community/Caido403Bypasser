@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ConfirmDialog from "primevue/confirmdialog";
 import MenuBar from "primevue/menubar";
-import { type Component, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 
 import { useScansStore } from "@/stores/scans";
 import { useSettingsStore } from "@/stores/settings";
@@ -10,8 +10,8 @@ import Scans from "@/views/Scans.vue";
 import Settings from "@/views/Settings.vue";
 import Templates from "@/views/Templates.vue";
 
-const pages: Record<string, Component> = { Scans, Templates, Settings };
-const page = ref("Scans");
+const pages = { Scans, Templates, Settings };
+const page = ref<keyof typeof pages>("Scans");
 
 const scansStore = useScansStore();
 const templatesStore = useTemplatesStore();
