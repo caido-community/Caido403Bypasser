@@ -1,9 +1,13 @@
 import { defineStore } from "pinia";
-import type { Scan, ScanResult, ScanSource } from "shared";
+import {
+  getErrorMessage,
+  type Scan,
+  type ScanResult,
+  type ScanSource,
+} from "shared";
 import { computed, ref } from "vue";
 
 import { useSDK } from "@/plugins/sdk";
-import { getErrorMessage } from "@/utils/errors";
 import { showResult } from "@/utils/result";
 
 export const useScansStore = defineStore("scans", () => {

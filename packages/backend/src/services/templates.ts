@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { defaultTemplates } from "../defaultTemplates";
 import type { BackendSDK } from "../types";
+import { exists } from "../utils/fs";
 
 const toYaml = (template: Template) => dump(template, { lineWidth: -1 });
 
@@ -29,11 +30,7 @@ export class TemplatesService {
 
   async load() {
     const { dir } = this;
-    // Caido's fs has no existsSync and its errors carry no `code`, so check presence via readdir.
-    const isFirstRun = !(await readdir(path.dirname(dir))).includes(
-      path.basename(dir),
-    );
-    if (isFirstRun) {
+    if (!(await exists(dir))) {
       await mkdir(dir, { recursive: true });
       await this.writeDefaults();
       this.changed();

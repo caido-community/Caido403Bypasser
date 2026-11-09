@@ -1,12 +1,11 @@
 import type { AIUpstreamModel } from "@caido/sdk-frontend";
 import { useStorage } from "@vueuse/core";
-import type { Template } from "shared";
+import { getErrorMessage, type Template } from "shared";
 import { computed, onBeforeUnmount, ref } from "vue";
 
 import { generateTemplate } from "@/ai/generate";
 import { useSDK } from "@/plugins/sdk";
 import { useTemplatesStore } from "@/stores/templates";
-import { getErrorMessage } from "@/utils/errors";
 import { toCrlf } from "@/utils/request";
 
 export const useAIGenerate = (draft: () => Template) => {

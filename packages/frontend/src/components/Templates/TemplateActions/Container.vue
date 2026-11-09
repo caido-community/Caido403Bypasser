@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import Button from "primevue/button";
-import { useConfirm } from "primevue/useconfirm";
 import { ref } from "vue";
 
 import { useTemplatesStore } from "@/stores/templates";
+import { useDangerConfirm } from "@/utils/confirm";
 
 const store = useTemplatesStore();
-const confirm = useConfirm();
+const requireConfirm = useDangerConfirm();
 
 const importInput = ref<HTMLInputElement>();
 const onImport = async (event: Event) => {
@@ -14,15 +14,6 @@ const onImport = async (event: Event) => {
   await store.importFiles(Array.from(input.files ?? []));
   input.value = "";
 };
-
-const requireConfirm = (message: string, accept: () => void) =>
-  confirm.require({
-    header: "Are you sure?",
-    message,
-    acceptProps: { label: "Confirm", severity: "danger" },
-    rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
-    accept,
-  });
 
 const onRestore = () =>
   requireConfirm(

@@ -1,10 +1,11 @@
-import { readdir, readFile, writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import path from "path";
 
 import { err, ok, type Result, type Settings, settingsSchema } from "shared";
 import { z } from "zod";
 
 import type { BackendSDK } from "../types";
+import { exists } from "../utils/fs";
 
 const defaultSettings: Settings = {
   templatesDelay: 100,
@@ -25,7 +26,7 @@ export class SettingsService {
 
   async load() {
     const { file } = this;
-    if (!(await readdir(path.dirname(file))).includes(path.basename(file))) {
+    if (!(await exists(file))) {
       return;
     }
 

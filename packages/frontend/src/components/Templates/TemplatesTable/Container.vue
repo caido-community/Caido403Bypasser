@@ -3,20 +3,18 @@ import Button from "primevue/button";
 import Card from "primevue/card";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import IconField from "primevue/iconfield";
-import InputIcon from "primevue/inputicon";
-import InputText from "primevue/inputtext";
 import ToggleSwitch from "primevue/toggleswitch";
-import { useConfirm } from "primevue/useconfirm";
 import type { Template } from "shared";
 import { computed, ref } from "vue";
 
 import { EmptyState } from "@/components/EmptyState";
 import { fullHeightCardPt } from "@/components/pt";
+import { SearchInput } from "@/components/SearchInput";
 import { useTemplatesStore } from "@/stores/templates";
+import { useDangerConfirm } from "@/utils/confirm";
 
 const store = useTemplatesStore();
-const confirm = useConfirm();
+const requireConfirm = useDangerConfirm();
 const search = ref("");
 
 const templates = computed(() => {
@@ -43,13 +41,11 @@ const selection = computed({
 });
 
 const onDelete = (template: Template) =>
-  confirm.require({
-    header: "Are you sure?",
-    message: `Template ${template.id} will be deleted.`,
-    acceptProps: { label: "Delete", severity: "danger" },
-    rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
-    accept: () => store.remove(template.id),
-  });
+  requireConfirm(
+    `Template ${template.id} will be deleted.`,
+    () => store.remove(template.id),
+    "Delete",
+  );
 </script>
 
 <template>
@@ -62,10 +58,7 @@ const onDelete = (template: Template) =>
             {{ enabledCount }} of {{ store.templates.length }} enabled
           </p>
         </div>
-        <IconField>
-          <InputIcon class="fas fa-search" />
-          <InputText v-model="search" placeholder="Filter" size="small" />
-        </IconField>
+        <SearchInput v-model="search" placeholder="Filter" />
       </div>
       <DataTable
         v-model:selection="selection"

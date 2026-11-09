@@ -1,11 +1,16 @@
-import { err, ok, type Result, scanSourceSchema } from "shared";
+import {
+  err,
+  getErrorMessage,
+  ok,
+  type Result,
+  scanSourceSchema,
+} from "shared";
 import { z } from "zod";
 
 import type { ScansService } from "../services/scans";
 import type { SettingsService } from "../services/settings";
 import type { TemplatesService } from "../services/templates";
 import type { BackendSDK } from "../types";
-import { getErrorMessage } from "../utils/errors";
 
 type Services = {
   templates: TemplatesService;

@@ -2,9 +2,6 @@
 import Button from "primevue/button";
 import Card from "primevue/card";
 import ContextMenu from "primevue/contextmenu";
-import IconField from "primevue/iconfield";
-import InputIcon from "primevue/inputicon";
-import InputText from "primevue/inputtext";
 import type { MenuItem } from "primevue/menuitem";
 import type { Scan } from "shared";
 import { computed, ref } from "vue";
@@ -13,6 +10,7 @@ import { statusClass, statusLabel } from "../status";
 
 import { EmptyState } from "@/components/EmptyState";
 import { fullHeightCardPt } from "@/components/pt";
+import { SearchInput } from "@/components/SearchInput";
 import { TextShimmer } from "@/components/TextShimmer";
 import { type VirtualColumn, VirtualTable } from "@/components/VirtualTable";
 import { useScansStore } from "@/stores/scans";
@@ -77,14 +75,7 @@ const formatTime = (timestamp: number) =>
     <template #content>
       <div class="flex items-center gap-2 h-16 px-3 shrink-0">
         <h3 class="text-md font-semibold flex-1">Scans</h3>
-        <IconField>
-          <InputIcon class="fas fa-search" />
-          <InputText
-            v-model="search"
-            placeholder="Filter by URL"
-            size="small"
-          />
-        </IconField>
+        <SearchInput v-model="search" placeholder="Filter by URL" />
         <Button
           v-tooltip.bottom="'Delete all scans'"
           icon="fas fa-trash"

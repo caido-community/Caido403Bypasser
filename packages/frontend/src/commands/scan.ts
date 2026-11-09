@@ -26,7 +26,9 @@ const getPageRequestIds = ({ page }: GlobalContext) => {
 };
 
 const fromIds = (ids: string[]): ScanSource[] =>
-  ids.map((requestId) => ({ kind: "Request", requestId }));
+  ids
+    .slice(0, MAX_REQUESTS)
+    .map((requestId) => ({ kind: "Request", requestId }));
 
 export const getScanSources = (
   context: CommandContext,
@@ -43,13 +45,10 @@ export const getScanSources = (
       ];
     }
     case "RequestRowContext":
-      return fromIds(context.requests.map((request) => request.id)).slice(
-        0,
-        MAX_REQUESTS,
-      );
+      return fromIds(context.requests.map((request) => request.id));
     case "ResponseContext":
       return fromIds([context.request.id]);
     case "BaseContext":
-      return fromIds(getPageRequestIds(globalContext())).slice(0, MAX_REQUESTS);
+      return fromIds(getPageRequestIds(globalContext()));
   }
 };

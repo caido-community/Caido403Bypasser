@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../errors";
 import { err, ok, type Result } from "../result";
 
 import { helper } from "./helpers";
@@ -7,7 +8,7 @@ export const runScript = (input: string, script: string): Result<string[]> => {
   try {
     output = new Function("helper", "input", script)(helper, input);
   } catch (error) {
-    return err(error instanceof Error ? error.message : String(error));
+    return err(getErrorMessage(error));
   }
 
   const requests: unknown[] = Array.isArray(output) ? output : [output];

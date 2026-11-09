@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import Card from "primevue/card";
 import ContextMenu from "primevue/contextmenu";
-import IconField from "primevue/iconfield";
-import InputIcon from "primevue/inputicon";
-import InputText from "primevue/inputtext";
 import { computed, ref } from "vue";
 
 import { statusClass, statusCodeClass, statusLabel } from "../status";
 
 import { EmptyState } from "@/components/EmptyState";
 import { fullHeightCardPt } from "@/components/pt";
+import { SearchInput } from "@/components/SearchInput";
 import { TextShimmer } from "@/components/TextShimmer";
 import { type VirtualColumn, VirtualTable } from "@/components/VirtualTable";
 import { useScansStore } from "@/stores/scans";
@@ -109,14 +107,7 @@ const onContextMenu = (row: Row, event: MouseEvent) => {
               </template>
             </p>
           </div>
-          <IconField>
-            <InputIcon class="fas fa-search" />
-            <InputText
-              v-model="search"
-              placeholder="Template or status"
-              size="small"
-            />
-          </IconField>
+          <SearchInput v-model="search" placeholder="Template or status" />
         </div>
         <VirtualTable
           :rows="rows"

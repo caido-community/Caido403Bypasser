@@ -4,6 +4,7 @@ import type { API } from "./api";
 import type { Events } from "./events";
 
 export { type Result, ok, err } from "./result";
+export { getErrorMessage } from "./errors";
 export type { API } from "./api";
 export type { Events } from "./events";
 export { type Template, templateSchema } from "./template";

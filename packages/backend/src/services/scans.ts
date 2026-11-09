@@ -1,6 +1,7 @@
 import { RequestSpecRaw } from "caido:utils";
 import {
   err,
+  getErrorMessage,
   ok,
   type Result,
   type ResultDetails,
@@ -13,7 +14,6 @@ import {
 
 import type { BackendSDK } from "../types";
 import { decodeRaw, encodeRaw, toBinaryString } from "../utils/bytes";
-import { getErrorMessage } from "../utils/errors";
 
 import type { SettingsService } from "./settings";
 import type { TemplatesService } from "./templates";
