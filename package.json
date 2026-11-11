@@ -1,33 +1,31 @@
 {
-  "name": "403bypasser",
-  "version": "1.5.0",
-  "description": "Bypass a 403 page with a set of templates",
-  "author": "bebiks <bebiks@cvssadvisor.com>",
-  "license": "CC0-1.0",
-  "type": "module",
+  "name": "bypasser",
+  "version": "0.0.0",
+  "private": true,
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint ./packages/**/src --fix",
-    "build": "caido-dev build",
-    "watch": "caido-dev watch"
+    "knip": "knip",
+    "test": "vitest run",
+    "build:shared": "pnpm --filter @caido-community/bypasser build",
+    "build": "pnpm build:shared && caido-dev build",
+    "watch": "pnpm build:shared && caido-dev watch",
+    "validate": "pnpm typecheck && pnpm lint && pnpm knip && pnpm test"
   },
   "devDependencies": {
-    "@caido-community/dev": "0.1.6",
-    "@caido/eslint-config": "0.6.0",
-    "@caido/plugin-manifest": "0.3.0",
-    "@caido/sdk-backend": "0.59.0",
+    "@caido-community/dev": "0.1.7",
+    "@caido/eslint-config": "0.10.0",
     "@caido/tailwindcss": "0.0.1",
-    "@types/node": "24.1.0",
-    "@vitejs/plugin-react": "5.0.0",
-    "@vitest/ui": "3.2.4",
-    "jszip": "3.10.1",
-    "postcss-prefixwrap": "1.56.2",
-    "rollup-plugin-dts": "6.2.1",
+    "@vitejs/plugin-vue": "5.2.1",
+    "eslint": "9.29.0",
+    "postcss-prefixwrap": "1.51.0",
     "tailwindcss": "3.4.13",
-    "tailwindcss-primeui": "0.6.1",
-    "typescript": "5.9.2",
-    "typescript-eslint": "8.39.1",
-    "vite": "6.3.5",
+    "tailwindcss-primeui": "0.3.4",
+    "typescript": "5.5.4",
+    "knip": "5.70.2",
     "vitest": "3.2.4"
-  }
+  },
+  "browserslist": [
+    "chrome >= 120"
+  ]
 }

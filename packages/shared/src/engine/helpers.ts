@@ -1,165 +1,105 @@
 import { HttpForge } from "ts-http-forge";
 
-import { type Helper } from "./types";
+type Update = string | ((current: string) => string);
 
-const getFirstLineOrThrow = (input: string): string => {
-  const firstLine = input.split("\r\n")[0];
-  if (firstLine === undefined || firstLine === "")
-    {throw new Error("No lines in input");}
-  return firstLine;
+const CRLF = "\r\n";
+
+const apply = (update: Update, current: string) =>
+  typeof update === "function" ? update(current) : update;
+
+const parseRequestLine = (input: string) => {
+  const [method = "", target = "", version = ""] = (
+    input.split(CRLF)[0] ?? ""
+  ).split(" ");
+  if (method === "" || target === "" || version === "") {
+    throw new Error("Invalid request line");
+  }
+
+  const queryIndex = target.indexOf("?");
+  return {
+    method,
+    path: queryIndex === -1 ? target : target.slice(0, queryIndex),
+    query: queryIndex === -1 ? "" : target.slice(queryIndex + 1),
+  };
 };
 
-const getRequestLineTokensOrThrow = (
-  input: string,
-): { method: string; url: string; version: string } => {
-  const firstLine = getFirstLineOrThrow(input);
-  const parts = firstLine.split(" ");
-  const method = parts[0];
-  const url = parts[1];
-  const version = parts[2];
-  if (
-    method === undefined ||
-    method === "" ||
-    url === undefined ||
-    url === "" ||
-    version === undefined ||
-    version === ""
-  )
-    {throw new Error("Invalid first line");}
-
-  return { method, url, version };
+const getBody = (input: string) => {
+  const separator = input.indexOf(CRLF + CRLF);
+  return separator === -1 ? "" : input.slice(separator + 4);
 };
 
-const splitUrl = (url: string): { path: string; query: string | undefined } => {
-  const [path, query] = url.split("?", 2);
-  if (path === undefined || path === "") {throw new Error("Invalid URL");}
-  return { path, query };
+const headerName = (header: string) => {
+  const colon = header.indexOf(":");
+  return (colon === -1 ? header : header.slice(0, colon)).trim();
 };
 
-const getCurrentPathOrThrow = (input: string): string => {
-  const { url } = getRequestLineTokensOrThrow(input);
-  const { path } = splitUrl(url);
-  return path;
-};
-
-const getCurrentQuery = (input: string): string | undefined => {
-  const { url } = getRequestLineTokensOrThrow(input);
-  const { query } = splitUrl(url);
-  return query;
-};
-
-export const helpers: Helper = {
+export const helper = {
   setLine: (
     input: string,
     lineNumber: number,
-    updateFn: (line: string | undefined) => string,
+    update: (line: string | undefined) => string,
   ) => {
-    const lines = input.split("\r\n");
-    lines[lineNumber] = updateFn(lines[lineNumber]);
-    return lines.join("\r\n");
+    const lines = input.split(CRLF);
+    lines[lineNumber] = update(lines[lineNumber]);
+    return lines.join(CRLF);
   },
 
-  setPath: (input: string, update: string | ((path: string) => string)) => {
-    const currentPath = getCurrentPathOrThrow(input);
-    const updatedPath =
-      typeof update === "function" ? update(currentPath) : update;
+  setMethod: (input: string, update: Update) =>
+    HttpForge.create(input)
+      .method(apply(update, parseRequestLine(input).method))
+      .build(),
 
-    return HttpForge.create(input).path(updatedPath).build();
-  },
+  setPath: (input: string, update: Update) =>
+    HttpForge.create(input)
+      .path(apply(update, parseRequestLine(input).path))
+      .build(),
+
+  setQuery: (input: string, update: Update) =>
+    HttpForge.create(input)
+      .setQuery(apply(update, parseRequestLine(input).query))
+      .build(),
 
   addQueryParameter: (input: string, param: string) => {
-    const eqIndex = param.indexOf("=");
-    if (eqIndex === -1) {
-      const currentQuery = getCurrentQuery(input);
-      const updatedQuery =
-        currentQuery !== undefined && currentQuery !== ""
-          ? `${currentQuery}&${param}`
-          : param;
-
-      return HttpForge.create(input).setQuery(updatedQuery).build();
+    const equals = param.indexOf("=");
+    if (equals === -1) {
+      const { query } = parseRequestLine(input);
+      return HttpForge.create(input)
+        .setQuery(query === "" ? param : `${query}&${param}`)
+        .build();
     }
 
-    const key = param.slice(0, eqIndex);
-    const value = param.slice(eqIndex + 1);
-
-    return HttpForge.create(input).addQueryParam(key, value).build();
+    return HttpForge.create(input)
+      .addQueryParam(param.slice(0, equals), param.slice(equals + 1))
+      .build();
   },
 
-  setQuery: (input: string, update: string | ((query: string) => string)) => {
-    const currentQuery = getCurrentQuery(input);
-    const updatedQuery =
-      typeof update === "function"
-        ? update(currentQuery ?? "")
-        : update;
-
-    return HttpForge.create(input).setQuery(updatedQuery).build();
-  },
-
-  setMethod: (input: string, update: string | ((method: string) => string)) => {
-    const { method } = getRequestLineTokensOrThrow(input);
-    const newMethod = typeof update === "function" ? update(method) : update;
-
-    return HttpForge.create(input).method(newMethod).build();
-  },
+  setBody: (input: string, update: Update) =>
+    HttpForge.create(input)
+      .body(apply(update, getBody(input)))
+      .build(),
 
   addHeader: (input: string, header: string) => {
-    const idx = header.indexOf(":");
-    const name = idx === -1 ? header : header.slice(0, idx).trim();
-    const value = idx === -1 ? "" : header.slice(idx + 1).trim();
-
-    return HttpForge.create(input).addHeader(name, value).build();
+    const colon = header.indexOf(":");
+    const value = colon === -1 ? "" : header.slice(colon + 1).trim();
+    return HttpForge.create(input).addHeader(headerName(header), value).build();
   },
 
-  removeHeader: (input: string, header: string) => {
-    const idx = header.indexOf(":");
-    const name = idx === -1 ? header : header.slice(0, idx).trim();
+  removeHeader: (input: string, header: string) =>
+    HttpForge.create(input).removeHeader(headerName(header)).build(),
 
-    return HttpForge.create(input).removeHeader(name).build();
-  },
-
-  setBody: (input: string, update: string | ((body: string) => string)) => {
-    const lines = input.split("\r\n");
-    const bodyIndex = lines.findIndex((line) => line.trim() === "");
-    const currentBody =
-      bodyIndex === -1 ? "" : lines.slice(bodyIndex + 1).join("\r\n");
-    const newBody = typeof update === "function" ? update(currentBody) : update;
-
-    return HttpForge.create(input).body(newBody).build();
-  },
-
-  getMethod: (input: string) => {
-    const { method } = getRequestLineTokensOrThrow(input);
-    return method ?? "";
-  },
-
-  getPath: (input: string) => {
-    const { url } = getRequestLineTokensOrThrow(input);
-    const { path } = splitUrl(url);
-    return path ?? "";
-  },
-
-  getBody: (input: string) => {
-    const lines = input.split("\r\n");
-    const bodyIndex = lines.findIndex((line) => line.trim() === "");
-    if (bodyIndex === -1) {return "";}
-
-    return lines.slice(bodyIndex + 1).join("\r\n");
-  },
-
-  getQuery: (input: string) => {
-    const { url } = getRequestLineTokensOrThrow(input);
-    const { query } = splitUrl(url);
-    return query ?? "";
-  },
+  getMethod: (input: string) => parseRequestLine(input).method,
+  getPath: (input: string) => parseRequestLine(input).path,
+  getQuery: (input: string) => parseRequestLine(input).query,
+  getBody,
 
   hasHeader: (input: string, header: string) => {
-    const lines = input.split("\r\n");
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i]?.trim();
-      if (line === "") {break;}
-      if (line?.startsWith(header + ":")) {return true;}
-    }
-
-    return false;
+    const name = headerName(header).toLowerCase();
+    const headerLines = input
+      .split(CRLF + CRLF)[0]
+      ?.split(CRLF)
+      .slice(1);
+    return (headerLines ?? []).some(
+      (line) => line.includes(":") && headerName(line).toLowerCase() === name,
+    );
   },
 };

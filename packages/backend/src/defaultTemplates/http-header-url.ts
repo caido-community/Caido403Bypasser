@@ -13,14 +13,12 @@ const parts = originalPath.split("/").filter(Boolean);
 const modifiedRequests = [];
 const host = "localhost"; // fallback host as helper API doesn't expose it
 
-// Loop to create prefixes and suffixes from the path parts
 for (let i = 0; i <= parts.length; i++) {
   const prefix = i === 0 ? "/" : "/" + parts.slice(0, i).join("/");
   const suffix = "/" + parts.slice(i).join("/");
   const newPath = suffix === "/" ? "/" : suffix;
   const fullUrl = \`http://\${host}\${prefix}\`;
 
-  // For each header, create a modified request with updated path and header
   for (const header of headerKeys) {
     let req = helper.setPath(input, () => newPath);
     req = helper.addHeader(req, \`\${header}: \${fullUrl}\`);

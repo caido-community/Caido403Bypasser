@@ -1,0 +1,11 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+.p-splitter-gutter {
+  background: var(--p-surface-900);
+}
+
+.p-splitter-gutter-handle {
+  background: var(--p-surface-600);
+}

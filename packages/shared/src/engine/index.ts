@@ -1,24 +1,24 @@
-import { helpers } from "./helpers";
-import { type TemplateOutput } from "./types";
+import { getErrorMessage } from "../errors";
+import { err, ok, type Result } from "../result";
 
-export const runScript = (
-  initialInput: string,
-  script: string,
-): TemplateOutput => {
+import { helper } from "./helpers";
+
+export const runScript = (input: string, script: string): Result<string[]> => {
+  let output: unknown;
   try {
-    const userFunction = new Function("helper", "input", script);
-    const result = userFunction(helpers, initialInput);
-    const results = Array.isArray(result) ? result : [result];
-    return {
-      success: true,
-      requests: results,
-    };
+    output = new Function("helper", "input", script)(helper, input);
   } catch (error) {
-    return {
-      success: false,
-      error,
-    };
+    return err(getErrorMessage(error));
   }
-};
 
-export * from "./types";
+  const requests: unknown[] = Array.isArray(output) ? output : [output];
+  if (
+    !requests.every((request): request is string => typeof request === "string")
+  ) {
+    return err(
+      "Script must return a request string or an array of request strings",
+    );
+  }
+
+  return ok(requests);
+};

@@ -12,13 +12,11 @@ const originalPath=helper.getPath(input);
 const parts=originalPath.split("/").filter(Boolean);
 const modifiedRequests=[];
 
-// Build prefix and suffix parts of the path
 for(let i=0;i<=parts.length;i++){
   const prefix=i===0?"/":"/"+parts.slice(0,i).join("/");
   const suffix="/"+parts.slice(i).join("/");
   const newPath=suffix==="/" ? "/" : suffix;
 
-  // For each header, set path and add header with prefix value
   for(const header of headerKeys){
     let req=helper.setPath(input,()=>newPath);
     req=helper.addHeader(req,header+": "+prefix);
